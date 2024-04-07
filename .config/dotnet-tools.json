@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "fsy": {
+      "version": "0.3.0",
+      "commands": [
+        "fsy"
+      ]
+    }
+  }
+}
