@@ -8,31 +8,31 @@ on:
 jobs:
   compile:
   steps:
-  - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-  # ---- DOTNET TOOLS RESTORE ---- #
+    # ---- DOTNET TOOLS RESTORE ---- #
 
-  - name: Restore Dotnet Tools Cache
-    id: cache-tools-restore
-    uses: actions/cache/restore@v4
-    with:
-      path: |
-        ~/.nuget
-      key: ${{ runner.os }}-dotnet-${{ hashFiles('**/.config/dotnet-tools.json') }}
+    - name: Restore Dotnet Tools Cache
+      id: cache-tools-restore
+      uses: actions/cache/restore@v4
+      with:
+        path: |
+          ~/.nuget
+        key: ${{ runner.os }}-dotnet-${{ hashFiles('**/.config/dotnet-tools.json') }}
 
-  - name: Restore Dotnet Tools
-    run: dotnet tool restore
+    - name: Restore Dotnet Tools
+      run: dotnet tool restore
 
-  - name: Save Dotnet Tools Cache
-    id: cache-tools-save
-    uses: actions/cache/save@v4
-    with:
-      path: |
-        ~/.nuget
-      key: ${{ steps.cache-tools-restore.outputs.cache-primary-key }}
+    - name: Save Dotnet Tools Cache
+      id: cache-tools-save
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          ~/.nuget
+        key: ${{ steps.cache-tools-restore.outputs.cache-primary-key }}
 
-  - run: |
-      cd ./fsx
-      dotnet fsy --force git.fsx
-      dotnet fsy --force solution.fsx
-      dotnet fsy --force docker.fsx
+    - run: |
+        cd ./fsx && \
+        dotnet fsy --force git.fsx && \
+        dotnet fsy --force solution.fsx && \
+        dotnet fsy --force docker.fsx
