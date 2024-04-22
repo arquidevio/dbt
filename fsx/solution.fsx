@@ -1,4 +1,4 @@
-#r "nuget: Ionide.ProjInfo, 0.61.3"
+#r "paket: nuget Ionide.ProjInfo >= 0.61.3"
 #nowarn "57"
 
 open Ionide.ProjInfo.InspectSln

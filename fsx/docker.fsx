@@ -1,6 +1,7 @@
-#r "nuget: Fake.Tools.Git, 6.0.0"
-#r "nuget: Fake.Core.Environment, 6.0.0"
-#r "nuget: Fake.Core.Trace, 6.0.0"
+#r "paket:
+  nuget Fake.Tools.Git >= 6.0.0
+  nuget Fake.Core.Environment >= 6.0.0
+  nuget Fake.Core.Trace >= 6.0.0"
 
 open Fake.Tools.Git
 open System
