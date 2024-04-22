@@ -7,7 +7,7 @@ on:
 
 jobs:
   compile:
-  steps:
+    steps:
     - uses: actions/checkout@v4
 
     # ---- DOTNET TOOLS RESTORE ---- #
