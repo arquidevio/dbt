@@ -12,7 +12,7 @@ let env = Environment.environVar
 let pwd = Directory.GetCurrentDirectory()
 let git = CommandHelper.runSimpleGitCommand
 
-let uniqueDirsWithChanges (): unit -> string seq =
+let uniqueDirsWithChanges: (unit -> string seq) =
 
     let referenceRev =
         let maybeTag = Environment.environVarOrNone "MAYBE_TAG"
