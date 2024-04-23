@@ -33,7 +33,7 @@ module Project =
     let isTest (projFilePath: string) : bool =
         projFilePath |> hasProperty "IsTestProject"
 
-    let isRequired
+    let requireIf
         (isRequired: string -> bool)
         (isExcluded: string -> bool)
         (projectPath: string)
