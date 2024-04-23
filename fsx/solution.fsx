@@ -1,6 +1,10 @@
-#r "paket: nuget Ionide.ProjInfo >= 0.61.3"
+#r "paket: 
+        nuget Ionide.ProjInfo >= 0.61.3
+        nuget Fake.Core.Trace >= 6.0.0"
+
 #nowarn "57"
 
+open Fake.Core
 open Ionide.ProjInfo.InspectSln
 open System.Xml.XPath
 open System.Collections.Generic
@@ -101,3 +105,32 @@ let findLeafDependants
             proj :: sofar
 
     find [] projectPath |> Seq.distinct
+
+let findRequiredProjects (slnFullPath: string) (projectFilter) (dirs: string seq) =
+    let projs = makeDependencyTree slnFullPath
+
+    dirs
+    |> Seq.filter (fun p ->
+        if Directory.Exists(p) then
+            true
+        else
+            Trace.traceImportantfn $"WARNING: path '%s{p}' no longer exists in the repository. Ignoring."
+            false)
+
+    |> Seq.choose (fun d ->
+        let rec findParentProj (path: string) =
+            match Directory.EnumerateFiles(path, "*.*sproj") |> Seq.toList with
+            | [] ->
+                match Directory.GetParent(path) with
+                | null -> None
+                | p -> findParentProj p.FullName
+            | [ proj ] -> Some proj
+            | _ -> failwithf $"Found multiple project files in %s{d}"
+
+        findParentProj d)
+    |> Seq.map Path.GetFullPath
+    |> Seq.distinct
+    //|> Seq.map(fun x -> printfn ">>>%s" x;x)
+    |> Seq.collect (findLeafDependants projs projectFilter)
+    |> Seq.distinct
+    |> Seq.toList
