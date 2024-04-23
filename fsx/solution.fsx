@@ -4,6 +4,8 @@
 
 #nowarn "57"
 
+namespace Arquidev.Dbt
+
 open Fake.Core
 open Ionide.ProjInfo.InspectSln
 open System.Xml.XPath
@@ -11,126 +13,137 @@ open System.Collections.Generic
 open System.IO
 open System
 
-let private getSlnData slnPath =
-    let result = tryParseSln slnPath
+[<RequireQualifiedAccess>]
+module Solution =
 
-    let _, data =
-        match result with
-        | Ok x -> x
-        | Error e -> failwith e.Message
+    let private getSlnData slnPath =
+        let result = tryParseSln slnPath
 
-    data
+        let _, data =
+            match result with
+            | Ok x -> x
+            | Error e -> failwith e.Message
 
-let projSafeName (projFullPath: string) =
-    projFullPath
-    |> Path.GetDirectoryName
-    |> Path.GetFileName
-    |> fun p -> p.ToLowerInvariant()
-    |> fun p -> p.Split('.')
-    |> fun p -> p[1..]
-    |> fun p -> String.Join('-', p)
-//|> fun p -> printfn "%s" p; p // DEBUG
+        data
 
-let propertyProjectFilter (propertyName: string) (projPath: string) : bool =
-    let xp = XPathDocument(projPath)
-    let n = xp.CreateNavigator()
+    let projSafeName (projFullPath: string) =
+        projFullPath
+        |> Path.GetDirectoryName
+        |> Path.GetFileName
+        |> fun p -> p.ToLowerInvariant()
+        |> fun p -> p.Split('.')
+        |> fun p -> p[1..]
+        |> fun p -> String.Join('-', p)
+    //|> fun p -> printfn "%s" p; p // DEBUG
 
-    n.SelectSingleNode($"/Project/PropertyGroup[*]/{propertyName}[text()='true']")
-    |> (not << isNull)
-
-let findProjects (projectFilter: string -> bool) (slnPath: string) =
-
-    let data = getSlnData slnPath
-
-    let rec projs (item: SolutionItem) =
-        match item.Kind with
-        | MsbuildFormat _ ->
-            [ match projectFilter item.Name with
-              | true -> Some item.Name
-              | _ -> None ]
-        | Folder(items, _) -> items |> List.collect projs
-        | Unsupported
-        | Unknown -> [ None ]
-
-    data.Items |> List.collect projs |> Seq.choose id |> Seq.toList
-
-let makeDependencyTree (slnPath: string) =
-
-    let getProjReferenceDeps (projPath: string) : HashSet<string> =
-
-        let resolveFullPath (relativePath: string) =
-            Path.GetFullPath(Path.Combine(Path.GetDirectoryName(projPath), relativePath.Replace("\\", "/")))
-
+    let propertyProjectFilter (propertyName: string) (projPath: string) : bool =
         let xp = XPathDocument(projPath)
         let n = xp.CreateNavigator()
-        let references = n.Select("//ProjectReference")
-        let mutable projectReferences = HashSet<string>()
 
-        while references.MoveNext() do
+        n.SelectSingleNode($"/Project/PropertyGroup[*]/{propertyName}[text()='true']")
+        |> (not << isNull)
 
-            let referenceVal =
-                match references.Current.SelectSingleNode("@Include") with
-                | null -> references.Current.SelectSingleNode("Include").Value
-                | v -> v.Value
+    let findInCwd =
+        Directory.EnumerateFiles "."
+        |> Seq.map FileInfo
+        |> Seq.tryFind (fun f -> f.Extension = ".sln")
+        |> Option.defaultWith (fun () -> failwith $"Sln file not found")
+        |> fun f -> f.FullName
+        |> IO.Path.GetFullPath
 
-            projectReferences.Add(referenceVal |> resolveFullPath) |> ignore
+    let findProjects (projectFilter: string -> bool) (slnPath: string) =
 
-        projectReferences
+        let data = getSlnData slnPath
 
-    let rec projs (item: SolutionItem) =
-        match item.Kind with
-        | MsbuildFormat _ -> [ getProjReferenceDeps item.Name |> Seq.map (fun k -> (k, item.Name)) ]
-        | Folder(items, _) -> items |> List.collect projs
-        | Unsupported
-        | Unknown -> []
+        let rec projs (item: SolutionItem) =
+            match item.Kind with
+            | MsbuildFormat _ ->
+                [ match projectFilter item.Name with
+                  | true -> Some item.Name
+                  | _ -> None ]
+            | Folder(items, _) -> items |> List.collect projs
+            | Unsupported
+            | Unknown -> [ None ]
 
-    let data = getSlnData slnPath
+        data.Items |> List.collect projs |> Seq.choose id |> Seq.toList
 
-    data.Items
-    |> List.collect projs
-    |> Seq.collect id
-    |> Seq.groupBy fst
-    |> Seq.map (fun (k, g) -> (k, g |> Seq.map snd |> Seq.toList))
-    |> dict
+    let makeDependencyTree (slnPath: string) =
 
-let findLeafDependants
-    (projs: IDictionary<string, list<string>>)
-    (leafProjPredicate: string -> bool)
-    (projectPath: string)
-    =
-    let rec find (sofar: string list) (proj: string) : string list =
-        if projs.ContainsKey(proj) && not <| leafProjPredicate proj then
-            projs[proj] |> Seq.collect (find sofar) |> Seq.toList
-        else
-            proj :: sofar
+        let getProjReferenceDeps (projPath: string) : HashSet<string> =
 
-    find [] projectPath |> Seq.distinct
+            let resolveFullPath (relativePath: string) =
+                Path.GetFullPath(Path.Combine(Path.GetDirectoryName(projPath), relativePath.Replace("\\", "/")))
 
-let findRequiredProjects (slnFullPath: string) (projectFilter) (dirs: string seq) =
-    let projs = makeDependencyTree slnFullPath
+            let xp = XPathDocument(projPath)
+            let n = xp.CreateNavigator()
+            let references = n.Select("//ProjectReference")
+            let mutable projectReferences = HashSet<string>()
 
-    dirs
-    |> Seq.filter (fun p ->
-        if Directory.Exists(p) then
-            true
-        else
-            Trace.traceImportantfn $"WARNING: path '%s{p}' no longer exists in the repository. Ignoring."
-            false)
+            while references.MoveNext() do
 
-    |> Seq.choose (fun d ->
-        let rec findParentProj (path: string) =
-            match Directory.EnumerateFiles(path, "*.*sproj") |> Seq.toList with
-            | [] ->
-                match Directory.GetParent(path) with
-                | null -> None
-                | p -> findParentProj p.FullName
-            | [ proj ] -> Some proj
-            | _ -> failwithf $"Found multiple project files in %s{d}"
+                let referenceVal =
+                    match references.Current.SelectSingleNode("@Include") with
+                    | null -> references.Current.SelectSingleNode("Include").Value
+                    | v -> v.Value
 
-        findParentProj d)
-    |> Seq.map Path.GetFullPath
-    |> Seq.distinct
-    //|> Seq.map(fun x -> printfn ">>>%s" x;x)
-    |> Seq.collect (findLeafDependants projs projectFilter)
-    |> Seq.distinct
-    |> Seq.toList
+                projectReferences.Add(referenceVal |> resolveFullPath) |> ignore
+
+            projectReferences
+
+        let rec projs (item: SolutionItem) =
+            match item.Kind with
+            | MsbuildFormat _ -> [ getProjReferenceDeps item.Name |> Seq.map (fun k -> (k, item.Name)) ]
+            | Folder(items, _) -> items |> List.collect projs
+            | Unsupported
+            | Unknown -> []
+
+        let data = getSlnData slnPath
+
+        data.Items
+        |> List.collect projs
+        |> Seq.collect id
+        |> Seq.groupBy fst
+        |> Seq.map (fun (k, g) -> (k, g |> Seq.map snd |> Seq.toList))
+        |> dict
+
+    let findLeafDependants
+        (projs: IDictionary<string, list<string>>)
+        (leafProjPredicate: string -> bool)
+        (projectPath: string)
+        =
+        let rec find (sofar: string list) (proj: string) : string list =
+            if projs.ContainsKey(proj) && not <| leafProjPredicate proj then
+                projs[proj] |> Seq.collect (find sofar) |> Seq.toList
+            else
+                proj :: sofar
+
+        find [] projectPath |> Seq.distinct
+
+    let findRequiredProjects (slnFullPath: string) (projectFilter) (dirs: string seq) =
+        let projs = makeDependencyTree slnFullPath
+
+        dirs
+        |> Seq.filter (fun p ->
+            if Directory.Exists(p) then
+                true
+            else
+                Trace.traceImportantfn $"WARNING: path '%s{p}' no longer exists in the repository. Ignoring."
+                false)
+
+        |> Seq.choose (fun d ->
+            let rec findParentProj (path: string) =
+                match Directory.EnumerateFiles(path, "*.*sproj") |> Seq.toList with
+                | [] ->
+                    match Directory.GetParent(path) with
+                    | null -> None
+                    | p -> findParentProj p.FullName
+                | [ proj ] -> Some proj
+                | _ -> failwithf $"Found multiple project files in %s{d}"
+
+            findParentProj d)
+        |> Seq.map Path.GetFullPath
+        |> Seq.distinct
+        //|> Seq.map(fun x -> printfn ">>>%s" x;x)
+        |> Seq.collect (findLeafDependants projs projectFilter)
+        |> Seq.distinct
+        |> Seq.toList
