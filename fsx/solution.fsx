@@ -26,23 +26,6 @@ module Solution =
 
         data
 
-    let projSafeName (projFullPath: string) =
-        projFullPath
-        |> Path.GetDirectoryName
-        |> Path.GetFileName
-        |> fun p -> p.ToLowerInvariant()
-        |> fun p -> p.Split('.')
-        |> fun p -> p[1..]
-        |> fun p -> String.Join('-', p)
-    //|> fun p -> printfn "%s" p; p // DEBUG
-
-    let propertyProjectFilter (propertyName: string) (projPath: string) : bool =
-        let xp = XPathDocument(projPath)
-        let n = xp.CreateNavigator()
-
-        n.SelectSingleNode($"/Project/PropertyGroup[*]/{propertyName}[text()='true']")
-        |> (not << isNull)
-
     let findInCwd () : string =
         Directory.EnumerateFiles "."
         |> Seq.map FileInfo
