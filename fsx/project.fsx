@@ -1,8 +1,5 @@
-#r "paket: nuget Fake.Core.Trace >= 6.0.0"
-
 namespace Arquidev.Dbt
 
-open Fake.Core
 open System
 open System.IO
 open System.Xml.XPath
@@ -37,22 +34,17 @@ module Project =
         projFilePath |> hasProperty "IsTestProject"
 
     let isRequired
-        (isRequiredPorperty: string)
         (isRequired: string -> bool)
-        (isTest: string -> bool)
+        (isExcluded: string -> bool)
         (projectPath: string)
-        : bool =
+        : bool * string list =
 
-        if projectPath |> isTest then
-            false
+        if projectPath |> isExcluded then
+            false, []
         else
             match projectPath |> isRequired with
-            | true -> true
+            | true -> true, []
             | false ->
-                Trace.traceImportantfn
-                    $"\nWARNING: {projectPath} is a leaf project without {isRequiredPorperty}=true property and will be ignored."
-
-                Trace.traceImportantfn
-                    "Either mark the project as publishable or remove it if it's dead code. You can also ignore this warning."
-
-                false
+                false,
+                [ $"WARNING: {projectPath} is a leaf project neither required nor included - it will be ignored."
+                  "To get rid of this warning either mark the project as required or excluded or remove it if it's dead code. You can also ignore this warning." ]
