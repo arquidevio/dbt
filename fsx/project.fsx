@@ -1,5 +1,8 @@
+#r "paket: nuget Fake.Core.Trace >= 6.0.0"
+
 namespace Arquidev.Dbt
 
+open Fake.Core
 open System
 open System.IO
 open System.Xml.XPath
@@ -33,8 +36,6 @@ module Project =
     let isTest (projFilePath: string) : bool =
         projFilePath |> hasProperty "IsTestProject"
 
-    let unmatchedProjectMsg (projPath: string) : string =
-        $"WARNING: ${projPath} is a leaf project not matching the inclusion criteria. The project will be ignored."
-
-    let requireIf (criteria: (string -> bool) list) (projectPath: string) : bool =
-        criteria |> Seq.map (fun filter -> filter projectPath) |> Seq.reduce (&&)
+    let warnIgnored (projFilePath: string) : unit =
+        Trace.traceImportantfn
+            $"WARNING: ${projFilePath} is a leaf project not matching the inclusion criteria. The project will be ignored."
