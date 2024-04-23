@@ -43,7 +43,7 @@ module Solution =
         n.SelectSingleNode($"/Project/PropertyGroup[*]/{propertyName}[text()='true']")
         |> (not << isNull)
 
-    let findInCwd =
+    let findInCwd () : string =
         Directory.EnumerateFiles "."
         |> Seq.map FileInfo
         |> Seq.tryFind (fun f -> f.Extension = ".sln")
