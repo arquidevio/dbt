@@ -33,18 +33,8 @@ module Project =
     let isTest (projFilePath: string) : bool =
         projFilePath |> hasProperty "IsTestProject"
 
-    let requireIf
-        (isRequired: string -> bool)
-        (isExcluded: string -> bool)
-        (projectPath: string)
-        : bool * string list =
+    let unmatchedProjectMsg (projPath: string) : string =
+        $"WARNING: ${projPath} is a leaf project not matching the inclusion criteria. The project will be ignored."
 
-        if projectPath |> isExcluded then
-            false, []
-        else
-            match projectPath |> isRequired with
-            | true -> true, []
-            | false ->
-                false,
-                [ $"WARNING: {projectPath} is a leaf project neither required nor included - it will be ignored."
-                  "To get rid of this warning either mark the project as required or excluded or remove it if it's dead code. You can also ignore this warning." ]
+    let requireIf (criteria: (string -> bool) list) (projectPath: string) : bool =
+        criteria |> Seq.map (fun filter -> filter projectPath) |> Seq.reduce (&&)
