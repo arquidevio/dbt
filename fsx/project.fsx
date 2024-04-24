@@ -38,4 +38,4 @@ module Project =
 
     let warnIgnored (projFilePath: string) : unit =
         Trace.traceImportantfn
-            $"WARNING: ${projFilePath} is a leaf project not matching the inclusion criteria. The project will be ignored."
+            $"WARNING: {projFilePath} is a leaf project not matching the inclusion criteria. The project will be ignored."
