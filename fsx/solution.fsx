@@ -102,8 +102,8 @@ module Solution =
 
         find [] projectPath |> Seq.distinct
 
-    let findRequiredProjects (slnFullPath: string) (projectFilter) (dirs: string seq) =
-        let projs = makeDependencyTree slnFullPath
+    let findRequiredProjects (slnPath: string) (projectFilter) (dirs: string seq) =
+        let projs = makeDependencyTree slnPath
 
         dirs
         |> Seq.filter (fun p ->
@@ -131,8 +131,8 @@ module Solution =
         |> Seq.distinct
         |> Seq.toList
 
-    let generateRestoreList (projectFilter: string -> bool) : unit =
-        let pwd = Directory.GetCurrentDirectory()
+    let generateRestoreList (projectFilter: string -> bool) (slnPath: string) : unit =
+        let pwd = Path.GetDirectoryName slnPath
         let input = StreamRef.Empty
 
         let tar =
@@ -149,17 +149,10 @@ module Solution =
             |> CreateProcess.withStandardInput (CreatePipe input)
             |> Proc.start
 
-        let restoreList =
-            CreateProcess.fromRawCommand "dotnet" [ "sln"; "list" ]
-            |> CreateProcess.redirectOutput
-            |> Proc.run
-            |> fun f -> f.Result.Output.Split(Environment.NewLine) |> Seq.ofArray
-            |> Seq.skip (2)
-            |> Seq.map (fun path -> path.Replace(pwd, String.Empty).Replace("\\", "/"))
-            |> Seq.filter projectFilter
-            |> Seq.iter (fun path -> input.Value.Write(Text.Encoding.UTF8.GetBytes(path + Environment.NewLine)))
+        findProjects projectFilter slnPath
+        |> Seq.map (fun path -> path.Replace(pwd, String.Empty).Trim('/'))
+        |> Seq.iter (fun path -> input.Value.Write(Text.Encoding.UTF8.GetBytes(path + Environment.NewLine)))
 
         input.Value.Flush()
         input.Value.Close()
-
         tar.Wait()
