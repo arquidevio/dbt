@@ -1,5 +1,6 @@
 #r "nuget: Ionide.ProjInfo, 0.64.0"
 #r "nuget: Fake.Core.Trace, 6.0.0"
+#r "nuget: Fake.Core.Process, 6.0.0"
 
 #nowarn "57"
 
@@ -129,3 +130,36 @@ module Solution =
         |> Seq.collect (findLeafDependants projs projectFilter)
         |> Seq.distinct
         |> Seq.toList
+
+    let generateRestoreList (projectFilter: string -> bool) : unit =
+        let pwd = Directory.GetCurrentDirectory()
+        let input = StreamRef.Empty
+
+        let tar =
+            CreateProcess.fromRawCommand
+                "tar"
+                [ "--sort=name"
+                  "--owner=root:0"
+                  "--group=root:0"
+                  "--mtime=2023-01-01 00:00:00"
+                  "-czvf"
+                  "restore-list.tar.gz"
+                  "-T"
+                  "-" ]
+            |> CreateProcess.withStandardInput (CreatePipe input)
+            |> Proc.start
+
+        let restoreList =
+            CreateProcess.fromRawCommand "dotnet" [ "sln"; "list" ]
+            |> CreateProcess.redirectOutput
+            |> Proc.run
+            |> fun f -> f.Result.Output.Split(Environment.NewLine) |> Seq.ofArray
+            |> Seq.skip (2)
+            |> Seq.map (fun path -> path.Replace(pwd, String.Empty).Replace("\\", "/"))
+            |> Seq.filter projectFilter
+            |> Seq.iter (fun path -> input.Value.Write(Text.Encoding.UTF8.GetBytes(path + Environment.NewLine)))
+
+        input.Value.Flush()
+        input.Value.Close()
+
+        tar.Wait()
