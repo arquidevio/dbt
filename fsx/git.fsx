@@ -25,11 +25,11 @@ let uniqueDirsWithChanges () : string seq =
 
             match Environment.environVarOrFail "BUILD_BASE_REF" with
             | "0000000000000000000000000000000000000000" ->
-                Trace.logfn "Reference rev is all zeros - defaulting to HEAD^"
+                Trace.logfn "Base ref is all zeros - defaulting to HEAD^"
                 "HEAD^"
-            | rev -> rev
+            | x -> x
 
-    Trace.logfn $"Reference rev: %s{referenceRev}"
+    Trace.logfn $"Base ref: %s{referenceRev}"
 
     let currentRev = env "BUILD_CURRENT_REF"
 
