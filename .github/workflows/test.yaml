@@ -36,5 +36,4 @@ jobs:
         cd ./fsx && \
         dotnet fsy run --force git.fsx && \
         dotnet fsy run --force solution.fsx && \
-        dotnet fsy run --force docker.fsx && \
         dotnet fsy run --force project.fsx
