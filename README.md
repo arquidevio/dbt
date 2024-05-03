@@ -1,2 +1,4 @@
 # dbt
-dotnet build tools
+## dependable build tools
+
+An F# toolkit for monorepo builds.
