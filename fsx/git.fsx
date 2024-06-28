@@ -3,6 +3,8 @@
   nuget Fake.Core.Environment >= 6.0.0
   nuget Fake.Core.Trace >= 6.0.0"
 
+namespace Arquidev.Dbt
+
 open Fake.Core
 open Fake.Tools.Git
 open System
