@@ -1,6 +1,6 @@
 #r "nuget: Ionide.ProjInfo, 0.64.0"
-#r "nuget: Fake.Core.Trace, 6.1.0"
-#r "nuget: Fake.Core.Process, 6.1.0"
+#r "nuget: Fake.Core.Trace, 6.1.1"
+#r "nuget: Fake.Core.Process, 6.1.1"
 
 #nowarn "57"
 
