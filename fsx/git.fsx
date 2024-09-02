@@ -1,7 +1,7 @@
 #r "paket:
-  nuget Fake.Tools.Git = 6.1.0
-  nuget Fake.Core.Environment = 6.1.0
-  nuget Fake.Core.Trace = 6.1.0"
+  nuget Fake.Tools.Git = 6.1.1
+  nuget Fake.Core.Environment = 6.1.1
+  nuget Fake.Core.Trace = 6.1.1"
 
 namespace Arquidev.Dbt
 
