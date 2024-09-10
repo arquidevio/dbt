@@ -1,7 +1,7 @@
 #r "paket: 
       nuget Ionide.ProjInfo = 0.64.0
-      nuget Fake.Core.Trace = 6.1.1
-      nuget Fake.Core.Process = 6.1.1
+      nuget Fake.Core.Trace = 6.0.0
+      nuget Fake.Core.Process = 6.0.0
 "
 
 #nowarn "57"

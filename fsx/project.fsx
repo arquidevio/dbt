@@ -1,4 +1,4 @@
-#r "paket: nuget Fake.Core.Trace = 6.1.1"
+#r "paket: nuget Fake.Core.Trace = 6.0.0"
 
 namespace Arquidev.Dbt
 
