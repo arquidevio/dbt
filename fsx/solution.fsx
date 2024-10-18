@@ -28,13 +28,15 @@ module Solution =
 
         data
 
-    let findInCwd () : string =
-        Directory.EnumerateFiles "."
+    let findInDir (dir: string) : string =
+        Directory.EnumerateFiles dir
         |> Seq.map FileInfo
         |> Seq.tryFind (fun f -> f.Extension = ".sln")
         |> Option.defaultWith (fun () -> failwith $"Sln file not found")
         |> fun f -> f.FullName
         |> IO.Path.GetFullPath
+
+    let findInCwd () : string = findInDir (Directory.GetCurrentDirectory ())
 
     let findProjects (projectFilter: string -> bool) (slnPath: string) =
 
@@ -134,27 +136,32 @@ module Solution =
         |> Seq.toList
 
     let generateRestoreList (projectFilter: string -> bool) (slnPath: string) : unit =
-        let pwd = Path.GetDirectoryName slnPath
-        let input = StreamRef.Empty
+        let slnDir = Path.GetDirectoryName slnPath
+        let originalPwd = Directory.GetCurrentDirectory()
 
-        let tar =
-            CreateProcess.fromRawCommand
-                "tar"
-                [ "--sort=name"
-                  "--owner=root:0"
-                  "--group=root:0"
-                  "--mtime=2023-01-01 00:00:00"
-                  "-czvf"
-                  "restore-list.tar.gz"
-                  "-T"
-                  "-" ]
-            |> CreateProcess.withStandardInput (CreatePipe input)
-            |> Proc.start
+        try
+            Directory.SetCurrentDirectory slnDir
+            let input = StreamRef.Empty
+            let tar =
+                CreateProcess.fromRawCommand
+                    "tar"
+                    [ "--sort=name"
+                      "--owner=root:0"
+                      "--group=root:0"
+                      "--mtime=2023-01-01 00:00:00"
+                      "-czvf"
+                      Path.Combine(slnDir, "restore-list.tar.gz")
+                      "-T"
+                      "-" ]
+                |> CreateProcess.withStandardInput (CreatePipe input)
+                |> Proc.start
 
-        findProjects projectFilter slnPath
-        |> Seq.map (fun path -> path.Replace(pwd, String.Empty).Trim('/'))
-        |> Seq.iter (fun path -> input.Value.Write(Text.Encoding.UTF8.GetBytes(path + Environment.NewLine)))
+            findProjects projectFilter slnPath
+            |> Seq.map (fun path -> path.Replace(slnDir, String.Empty).Trim('/'))
+            |> Seq.iter (fun path -> input.Value.Write(Text.Encoding.UTF8.GetBytes(path + Environment.NewLine)))
 
-        input.Value.Flush()
-        input.Value.Close()
-        tar.Wait()
+            input.Value.Flush()
+            input.Value.Close()
+            tar.Wait()
+        finally
+            Directory.SetCurrentDirectory originalPwd
