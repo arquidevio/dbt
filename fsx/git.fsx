@@ -32,13 +32,14 @@ module Git =
                 [ git pwd $"describe --abbrev=0 --tags {currentTag}^" ]
             | None ->
                 match baseRefOverride with
-                | Some ref ->
-                    Trace.tracefn $"Base ref set via $BUILD_BASE_REF: {ref}"
-                    [ ref ]
-                | None ->
+                | None
+                | Some "0000000000000000000000000000000000000000" ->
                     Trace.tracef "Base ref(s): "
                     let output = git pwd $$"""show --no-patch --format="%P" {{currentRef}}"""
                     output.Split(' ') |> Seq.toList
+                | Some ref ->
+                    Trace.tracefn $"Base ref set via $BUILD_BASE_REF: {ref}"
+                    [ ref ]
 
         let dirs =
             seq {
@@ -57,6 +58,12 @@ module Git =
                 "Detected git changes in: "
 
         Trace.tracefn $"%s{info}"
-
         dirs |> Seq.iter (Trace.logfn "%s")
+
         dirs
+        |> Seq.filter (fun p ->
+            if Directory.Exists(p) then
+                true
+            else
+                Trace.traceImportantfn $"WARNING: path '%s{p}' no longer exists in the repository. Ignoring."
+                false)

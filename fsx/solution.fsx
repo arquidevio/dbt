@@ -1,8 +1,9 @@
 #r "paket: 
       nuget Ionide.ProjInfo = 0.64.0
-      nuget Fake.Core.Trace = 6.1.1
       nuget Fake.Core.Process = 6.1.1
 "
+
+#load "discover.fsx"
 
 #nowarn "57"
 
@@ -36,7 +37,8 @@ module Solution =
         |> fun f -> f.FullName
         |> IO.Path.GetFullPath
 
-    let findInCwd () : string = findInDir (Directory.GetCurrentDirectory ())
+    let findInCwd () : string =
+        findInDir (Directory.GetCurrentDirectory())
 
     let findProjects (projectFilter: string -> bool) (slnPath: string) =
 
@@ -109,27 +111,7 @@ module Solution =
     let findRequiredProjects (slnPath: string) (projectFilter) (dirs: string seq) =
         let projs = makeDependencyTree slnPath
 
-        dirs
-        |> Seq.filter (fun p ->
-            if Directory.Exists(p) then
-                true
-            else
-                Trace.traceImportantfn $"WARNING: path '%s{p}' no longer exists in the repository. Ignoring."
-                false)
-
-        |> Seq.choose (fun d ->
-            let rec findParentProj (path: string) =
-                match Directory.EnumerateFiles(path, "*.*sproj") |> Seq.toList with
-                | [] ->
-                    match Directory.GetParent(path) with
-                    | null -> None
-                    | p -> findParentProj p.FullName
-                | [ proj ] -> Some proj
-                | _ -> failwithf $"Found multiple project files in %s{d}"
-
-            findParentProj d)
-        |> Seq.map Path.GetFullPath
-        |> Seq.distinct
+        Discover.uniqueParentProjectPaths dirs "*.*sproj"
         //|> Seq.map(fun x -> printfn ">>>%s" x;x)
         |> Seq.collect (findLeafDependants projs projectFilter)
         |> Seq.distinct
@@ -142,6 +124,7 @@ module Solution =
         try
             Directory.SetCurrentDirectory slnDir
             let input = StreamRef.Empty
+
             let tar =
                 CreateProcess.fromRawCommand
                     "tar"
