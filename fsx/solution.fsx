@@ -97,11 +97,11 @@ module Solution =
 
     let findLeafDependants
         (projs: IDictionary<string, list<string>>)
-        (leafProjPredicate: string -> bool)
+        (isLeafProject: string -> bool)
         (projectPath: string)
         =
         let rec find (sofar: string list) (proj: string) : string list =
-            if projs.ContainsKey(proj) && not <| leafProjPredicate proj then
+            if projs.ContainsKey(proj) && not <| isLeafProject proj then
                 projs[proj] |> Seq.collect (find sofar) |> Seq.toList
             else
                 proj :: sofar
@@ -111,7 +111,7 @@ module Solution =
     let findRequiredProjects (slnPath: string) (projectFilter) (dirs: string seq) =
         let projs = makeDependencyTree slnPath
 
-        Discover.uniqueParentProjectPaths dirs "*.*sproj"
+        Discover.uniqueParentProjectPaths "*.*sproj" dirs
         //|> Seq.map(fun x -> printfn ">>>%s" x;x)
         |> Seq.collect (findLeafDependants projs projectFilter)
         |> Seq.distinct

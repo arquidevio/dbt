@@ -8,7 +8,7 @@ open System.IO
 open System.Xml.XPath
 
 [<RequireQualifiedAccess>]
-module Project =
+module Project2 =
 
     let safeName (projFullPath: string) : string =
         projFullPath

@@ -17,5 +17,5 @@ module internal Discover =
         findParentProj originPath
 
     /// Find unique parent projects (determined by existence of a single file matching projectPattern) of the given dirs
-    let uniqueParentProjectPaths (dirs: string seq) (projectPattern: string) : string seq =
+    let uniqueParentProjectPaths (projectPattern: string)  (dirs: string seq) : string seq =
         dirs |> Seq.choose (findParentProjectPath projectPattern) |> Seq.distinct
