@@ -66,7 +66,7 @@ module Pipeline =
 
     let run (selectors: Selector list) =
         let mode = Mode.FromEnv()
-        Trace.tracefn $"Mode: %A{mode.ToString().ToLower()}"
+        Trace.tracefn $"Mode: %s{mode.ToString().ToLower()}"
 
         let dirs =
             match mode with
