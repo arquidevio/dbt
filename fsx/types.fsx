@@ -32,6 +32,21 @@ type ProjectPath =
 type BuildSpec = { docker: DockerBuildSpec list }
 
 and DockerBuildSpec =
-    { file: string
+    { name: string
+      file: string option
       context: string
-      target: string }
+      target: string option }
+
+    static member Create name =
+        { name = name
+          file = None
+          context = "."
+          target = None }
+
+type UpdateSpec =
+    { environment: string
+      new_tag: string
+      version: int64
+      targets: UpdateTarget list }
+
+and UpdateTarget = { dir: string; images: string seq }

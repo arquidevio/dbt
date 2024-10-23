@@ -1,7 +1,7 @@
 namespace Arquidev.Dbt
 
 #load "solution.fsx"
-#load "../project.fsx"
+#load "../types.fsx"
 
 open System.IO
 open System.Xml.XPath

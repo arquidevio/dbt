@@ -3,9 +3,8 @@
 
 namespace Arquidev.Dbt
 
-#load "discover.fsx"
 #load "git.fsx"
-#load "project.fsx"
+#load "types.fsx"
 
 open Fake.Core
 
@@ -26,10 +25,26 @@ type Mode =
 module Pipeline =
     open System.IO
 
+    /// Find the closest ancestor dir of the originPath that contains a single file matching projectPattern
+    let findParentProjectPath (projectPattern: string) (originPath: string) : string option =
+        let rec findParentProj (p: string) =
+            match Directory.EnumerateFiles(p, projectPattern) |> Seq.tryExactlyOne with
+            | None ->
+                match Directory.GetParent(p) with
+                | null -> None
+                | p -> findParentProj p.FullName
+            | Some proj -> Some(proj |> Path.GetFullPath)
+
+        findParentProj originPath
+
+    /// Find unique parent projects (determined by existence of a single file matching projectPattern) of the given dirs
+    let uniqueParentProjectPaths (projectPattern: string) (dirs: string seq) : string seq =
+        dirs |> Seq.choose (findParentProjectPath projectPattern) |> Seq.distinct
+
     let findRequiredProjects (dirPaths: string seq) (config: Selector) =
 
         dirPaths
-        |> Discover.uniqueParentProjectPaths config.pattern
+        |> uniqueParentProjectPaths config.pattern
         |> Seq.collect config.expandLeafs
         |> Seq.distinct
         |> Seq.filter (not << config.isIgnored)
