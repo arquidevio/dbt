@@ -3,7 +3,7 @@
       nuget Fake.Core.Process = 6.1.1
 "
 
-#load "discover.fsx"
+#load "../discover.fsx"
 
 #nowarn "57"
 
@@ -107,15 +107,6 @@ module Solution =
                 proj :: sofar
 
         find [] projectPath |> Seq.distinct
-
-    let findRequiredProjects (slnPath: string) (projectFilter) (dirs: string seq) =
-        let projs = makeDependencyTree slnPath
-
-        Discover.uniqueParentProjectPaths "*.*sproj" dirs
-        //|> Seq.map(fun x -> printfn ">>>%s" x;x)
-        |> Seq.collect (findLeafDependants projs projectFilter)
-        |> Seq.distinct
-        |> Seq.toList
 
     let generateRestoreList (projectFilter: string -> bool) (slnPath: string) : unit =
         let slnDir = Path.GetDirectoryName slnPath
