@@ -108,7 +108,7 @@ module Solution =
 
         find [] projectPath |> Seq.distinct
 
-    let generateRestoreList (projectFilter: string -> bool) (slnPath: string) : unit =
+    let generateRestoreList (slnPath: string) : unit =
         let slnDir = Path.GetDirectoryName slnPath
         let originalPwd = Directory.GetCurrentDirectory()
 
@@ -130,7 +130,7 @@ module Solution =
                 |> CreateProcess.withStandardInput (CreatePipe input)
                 |> Proc.start
 
-            findProjects projectFilter slnPath
+            findProjects (fun _ -> true) slnPath
             |> Seq.map (fun path -> path.Replace(slnDir, String.Empty).Trim('/'))
             |> Seq.iter (fun path -> input.Value.Write(Text.Encoding.UTF8.GetBytes(path + Environment.NewLine)))
 
