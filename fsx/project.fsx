@@ -2,11 +2,6 @@ namespace Arquidev.Dbt
 
 open System.IO
 
-type ProjectPath =
-    { path: string
-      safeName: string
-      kind: string }
-
 type Selector =
     { kind: string
       pattern: string
@@ -27,3 +22,16 @@ type Selector =
                 |> Path.GetFileName
                 |> fun p -> p.ToLowerInvariant().Replace(".", "-")
           expandLeafs = Seq.singleton }
+
+type ProjectPath =
+    { path: string
+      dir: string
+      safeName: string
+      kind: string }
+
+type BuildSpec = { docker: DockerBuildSpec list }
+
+and DockerBuildSpec =
+    { file: string
+      context: string
+      target: string }

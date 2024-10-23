@@ -1,4 +1,5 @@
-#r "paket: nuget Fake.Core.Environment = 6.1.1"
+#r "paket: 
+        nuget Fake.Core.Environment >= 6.0"
 
 namespace Arquidev.Dbt
 
@@ -23,6 +24,7 @@ type Mode =
 
 [<RequireQualifiedAccess>]
 module Pipeline =
+    open System.IO
 
     let findRequiredProjects (dirPaths: string seq) (config: Selector) =
 
@@ -44,6 +46,7 @@ module Pipeline =
         |> Seq.map (fun p ->
             { kind = config.kind
               path = p
+              dir = FileInfo(p).DirectoryName
               safeName = config.safeName p })
 
     let run (selectors: Selector list) =
