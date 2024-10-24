@@ -33,8 +33,5 @@ jobs:
         key: ${{ steps.cache-tools-restore.outputs.cache-primary-key }}
 
     - run: |
-        dotnet fsy run --force tests/test.fsx && \
-        cd ./fsx && \
-        dotnet fsy run --force git.fsx && \
-        dotnet fsy run --force solution.fsx && \
-        dotnet fsy run --force project.fsx
+        dotnet fsy -v run --force tests/test.fsx
+

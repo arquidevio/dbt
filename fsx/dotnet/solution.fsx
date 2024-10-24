@@ -1,8 +1,9 @@
 #r "paket: 
-      nuget Ionide.ProjInfo = 0.64.0
-      nuget Fake.Core.Trace = 6.1.1
-      nuget Fake.Core.Process = 6.1.1
+      nuget Ionide.ProjInfo >= 0.67
+      nuget Fake.Core.Process >= 6.0
 "
+
+#load "../discover.fsx"
 
 #nowarn "57"
 
@@ -28,13 +29,16 @@ module Solution =
 
         data
 
-    let findInCwd () : string =
-        Directory.EnumerateFiles "."
+    let findInDir (dir: string) : string =
+        Directory.EnumerateFiles dir
         |> Seq.map FileInfo
         |> Seq.tryFind (fun f -> f.Extension = ".sln")
         |> Option.defaultWith (fun () -> failwith $"Sln file not found")
         |> fun f -> f.FullName
         |> IO.Path.GetFullPath
+
+    let findInCwd () : string =
+        findInDir (Directory.GetCurrentDirectory())
 
     let findProjects (projectFilter: string -> bool) (slnPath: string) =
 
@@ -93,68 +97,45 @@ module Solution =
 
     let findLeafDependants
         (projs: IDictionary<string, list<string>>)
-        (leafProjPredicate: string -> bool)
+        (isLeafProject: string -> bool)
         (projectPath: string)
         =
         let rec find (sofar: string list) (proj: string) : string list =
-            if projs.ContainsKey(proj) && not <| leafProjPredicate proj then
+            if projs.ContainsKey(proj) && not <| isLeafProject proj then
                 projs[proj] |> Seq.collect (find sofar) |> Seq.toList
             else
                 proj :: sofar
 
         find [] projectPath |> Seq.distinct
 
-    let findRequiredProjects (slnPath: string) (projectFilter) (dirs: string seq) =
-        let projs = makeDependencyTree slnPath
+    let generateRestoreList (slnPath: string) : unit =
+        let slnDir = Path.GetDirectoryName slnPath
+        let originalPwd = Directory.GetCurrentDirectory()
 
-        dirs
-        |> Seq.filter (fun p ->
-            if Directory.Exists(p) then
-                true
-            else
-                Trace.traceImportantfn $"WARNING: path '%s{p}' no longer exists in the repository. Ignoring."
-                false)
+        try
+            Directory.SetCurrentDirectory slnDir
+            let input = StreamRef.Empty
 
-        |> Seq.choose (fun d ->
-            let rec findParentProj (path: string) =
-                match Directory.EnumerateFiles(path, "*.*sproj") |> Seq.toList with
-                | [] ->
-                    match Directory.GetParent(path) with
-                    | null -> None
-                    | p -> findParentProj p.FullName
-                | [ proj ] -> Some proj
-                | _ -> failwithf $"Found multiple project files in %s{d}"
+            let tar =
+                CreateProcess.fromRawCommand
+                    "tar"
+                    [ "--sort=name"
+                      "--owner=root:0"
+                      "--group=root:0"
+                      "--mtime=2023-01-01 00:00:00"
+                      "-czvf"
+                      Path.Combine(slnDir, "restore-list.tar.gz")
+                      "-T"
+                      "-" ]
+                |> CreateProcess.withStandardInput (CreatePipe input)
+                |> Proc.start
 
-            findParentProj d)
-        |> Seq.map Path.GetFullPath
-        |> Seq.distinct
-        //|> Seq.map(fun x -> printfn ">>>%s" x;x)
-        |> Seq.collect (findLeafDependants projs projectFilter)
-        |> Seq.distinct
-        |> Seq.toList
+            findProjects (fun _ -> true) slnPath
+            |> Seq.map (fun path -> path.Replace(slnDir, String.Empty).Trim('/'))
+            |> Seq.iter (fun path -> input.Value.Write(Text.Encoding.UTF8.GetBytes(path + Environment.NewLine)))
 
-    let generateRestoreList (projectFilter: string -> bool) (slnPath: string) : unit =
-        let pwd = Path.GetDirectoryName slnPath
-        let input = StreamRef.Empty
-
-        let tar =
-            CreateProcess.fromRawCommand
-                "tar"
-                [ "--sort=name"
-                  "--owner=root:0"
-                  "--group=root:0"
-                  "--mtime=2023-01-01 00:00:00"
-                  "-czvf"
-                  "restore-list.tar.gz"
-                  "-T"
-                  "-" ]
-            |> CreateProcess.withStandardInput (CreatePipe input)
-            |> Proc.start
-
-        findProjects projectFilter slnPath
-        |> Seq.map (fun path -> path.Replace(pwd, String.Empty).Trim('/'))
-        |> Seq.iter (fun path -> input.Value.Write(Text.Encoding.UTF8.GetBytes(path + Environment.NewLine)))
-
-        input.Value.Flush()
-        input.Value.Close()
-        tar.Wait()
+            input.Value.Flush()
+            input.Value.Close()
+            tar.Wait()
+        finally
+            Directory.SetCurrentDirectory originalPwd

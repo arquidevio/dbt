@@ -1,13 +1,23 @@
 #r "paket:
-  nuget Fake.Tools.Git = 6.1.1
-  nuget Fake.Core.Environment = 6.1.1
-  nuget Fake.Core.Trace = 6.1.1"
+  nuget Fake.Tools.Git >= 6.0
+  nuget Fake.Core.Environment >= 6.0
+  nuget Fake.Core.Trace >= 6.0"
 
 namespace Arquidev.Dbt
 
 open Fake.Core
 open Fake.Tools.Git
 open System.IO
+
+type DiffSpec =
+    { CurrentCommit: string option
+      BaseCommit: string option
+      MaybeTag: string option }
+
+    static member FromEnv() =
+        { CurrentCommit = Environment.environVarOrNone "DBT_CURRENT_COMMIT"
+          BaseCommit = Environment.environVarOrNone "DBT_BASE_COMMIT"
+          MaybeTag = Environment.environVarOrNone "DBT_MAYBE_TAG" }
 
 [<RequireQualifiedAccess>]
 module Git =
@@ -16,35 +26,39 @@ module Git =
     let pwd = Directory.GetCurrentDirectory()
     let git = CommandHelper.runSimpleGitCommand
 
-    let uniqueDirsWithChanges () : string seq =
+    let allDirs () : string seq =
+        FileStatus.getAllFiles pwd
+        |> Seq.map (snd >> FileInfo >> (fun f -> Path.GetRelativePath(pwd, f.Directory.FullName)))
+        |> Seq.filter ((<>) ".")
 
-        let currentRef = env "BUILD_CURRENT_REF" "HEAD"
-        let baseRefOverride = Environment.environVarOrNone "BUILD_BASE_REF"
+    let dirsFromDiff (spec: DiffSpec) : string seq =
 
-        Trace.tracefn $"Current ref: %s{currentRef}"
+        let currentCommit = spec.CurrentCommit |> Option.defaultValue "HEAD"
+        let baseCommit = spec.BaseCommit
+
+        Trace.tracefn $"Current revision: %s{currentCommit}"
 
         let baseRefs =
-            let maybeTag = Environment.environVarOrNone "MAYBE_TAG"
-
-            match maybeTag with
+            match spec.MaybeTag with
             | Some currentTag ->
-                Trace.logfn $"Building tag: %s{currentTag}"
+                Trace.logfn $"Tag: %s{currentTag}"
                 [ git pwd $"describe --abbrev=0 --tags {currentTag}^" ]
             | None ->
-                match baseRefOverride with
-                | Some ref ->
-                    Trace.tracefn $"Base ref set via $BUILD_BASE_REF: {ref}"
-                    [ ref ]
-                | None ->
-                    Trace.tracef "Base ref(s): "
-                    let output = git pwd $$"""show --no-patch --format="%P" {{currentRef}}"""
+                match baseCommit with
+                | None
+                | Some "0000000000000000000000000000000000000000" ->
+                    Trace.tracef "Base revisions(s): "
+                    let output = git pwd $$"""show --no-patch --format="%P" {{currentCommit}}"""
                     output.Split(' ') |> Seq.toList
+                | Some ref ->
+                    Trace.tracefn $"Base revision override: {ref}"
+                    [ ref ]
 
         let dirs =
             seq {
                 for baseRef in baseRefs do
                     yield!
-                        FileStatus.getChangedFiles pwd currentRef baseRef
+                        FileStatus.getChangedFiles pwd currentCommit baseRef
                         |> Seq.map (snd >> FileInfo >> (fun f -> Path.GetRelativePath(pwd, f.Directory.FullName)))
                         |> Seq.filter ((<>) ".")
             }
@@ -57,6 +71,12 @@ module Git =
                 "Detected git changes in: "
 
         Trace.tracefn $"%s{info}"
-
         dirs |> Seq.iter (Trace.logfn "%s")
+
         dirs
+        |> Seq.filter (fun p ->
+            if Directory.Exists(p) then
+                true
+            else
+                Trace.traceImportantfn $"WARNING: path '%s{p}' no longer exists in the repository. Ignoring."
+                false)
