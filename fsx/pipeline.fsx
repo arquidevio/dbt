@@ -1,5 +1,5 @@
 #r "paket: 
-        nuget Fake.Core.Environment >= 6.0"
+        nuget Fake.Core.Environment ~> 6.0"
 
 namespace Arquidev.Dbt
 

@@ -1,5 +1,5 @@
 #r "paket:
-    nuget FSharp.SystemTextJson >= 1.3"
+        nuget FSharp.SystemTextJson ~> 1.3"
 
 namespace Arquidev.Dbt
 
@@ -14,5 +14,6 @@ module Utils =
 module Json =
     open System.Text.Json
     open System.Text.Json.Serialization
+
     let write value =
         JsonSerializer.Serialize(value, JsonFSharpOptions.Default().ToJsonSerializerOptions())
