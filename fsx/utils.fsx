@@ -15,5 +15,8 @@ module Json =
     open System.Text.Json
     open System.Text.Json.Serialization
 
-    let write value =
+    let write (value: 'a) : string =
         JsonSerializer.Serialize(value, JsonFSharpOptions.Default().ToJsonSerializerOptions())
+
+    let read<'a> (value:string) : 'a =
+        JsonSerializer.Deserialize<'a>(value, JsonFSharpOptions.Default().ToJsonSerializerOptions())
