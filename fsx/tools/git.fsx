@@ -44,10 +44,10 @@ module Git =
         member _.CheckoutNew source branch =
             Git.Branches.checkoutNewBranch repoDir source branch
 
-        member _.Commit(messages: string list) =
+        member _.Commit (author: string option) (messages: string list) =
             let msgString = messages |> List.map (sprintf "-m \"%s\"") |> String.concat " "
 
-            $"commit {msgString}"
+            $"""commit {author |> Option.defaultValue ""} {msgString}"""
             |> Git.CommandHelper.runSimpleGitCommand repoDir
             |> Trace.trace
 
