@@ -16,7 +16,6 @@ open System.IO
 [<RequireQualifiedAccess>]
 module Git =
 
-
     type GitRef =
         { Hash: string
           Name: string
@@ -74,6 +73,13 @@ module Git =
 
         member _.CurrentBranch = Git.Information.getBranchName repoDir
         member _.IsDirty = Git.Information.isCleanWorkingCopy repoDir |> not
+
+        member _.HasStagedChanges() =
+
+            let success, _, _ =
+                Git.CommandHelper.runGitCommand repoDir "git diff --staged --no-ext-diff --quiet"
+
+            not success
 
         member _.CurrentHash =
             Git.Information.getCurrentSHA1 repoDir |> Git.Information.showName repoDir
