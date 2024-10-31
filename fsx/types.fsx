@@ -47,6 +47,6 @@ type UpdateSpec =
     { environment: string
       new_tag: string
       version: int64
-      targets: UpdateTarget list }
+      images: ImageSpec list }
 
-and UpdateTarget = { dir: string; images: string seq }
+and ImageSpec = { name: string; digest: string option }

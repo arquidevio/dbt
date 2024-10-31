@@ -1,9 +1,7 @@
 #r "paket: 
-      nuget Ionide.ProjInfo >= 0.67
-      nuget Fake.Core.Process >= 6.0
+      nuget Ionide.ProjInfo ~> 0.67
+      nuget Fake.Core.Process ~> 6.0
 "
-
-#load "../discover.fsx"
 
 #nowarn "57"
 
