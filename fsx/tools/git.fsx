@@ -77,7 +77,7 @@ module Git =
         member _.HasStagedChanges() =
 
             let success, _, _ =
-                Git.CommandHelper.runGitCommand repoDir "git diff --staged --no-ext-diff --quiet"
+                Git.CommandHelper.runGitCommand repoDir "diff --staged --no-ext-diff --quiet"
 
             not success
 
