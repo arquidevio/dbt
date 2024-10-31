@@ -49,4 +49,4 @@ type UpdateSpec =
       version: int64
       images: ImageSpec list }
 
-and ImageSpec = { name: string; digest: string }
+and ImageSpec = { name: string; digest: string option }
