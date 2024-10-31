@@ -8,12 +8,14 @@
 namespace Arquidev.Dbt
 
 open Regex
+open Fake.Core
 open Fake.Tools
 open Semver
 open System.IO
 
 [<RequireQualifiedAccess>]
 module Git =
+
 
     type GitRef =
         { Hash: string
@@ -28,29 +30,35 @@ module Git =
 
     type RepoHasNoTags = exn
 
-    type Repo(path: string) =
+    type Repo(repoDir: string) =
 
         member _.AddRemote url =
-            Git.CommandHelper.gitCommandf path "remote add origin %s" url
+            Git.CommandHelper.gitCommandf repoDir "remote add origin %s" url
 
         member _.CheckoutTag tag =
-            Git.Branches.checkoutBranch path (sprintf "tags/%s" tag)
+            Git.Branches.checkoutBranch repoDir (sprintf "tags/%s" tag)
 
-        member _.Checkout branch = Git.Branches.checkoutBranch path branch
+        member _.Checkout branch =
+            Git.Branches.checkoutBranch repoDir branch
 
         member _.CheckoutNew source branch =
-            Git.Branches.checkoutNewBranch path source branch
+            Git.Branches.checkoutNewBranch repoDir source branch
 
-        member _.Commit message = Git.Commit.exec path message
+        member _.Commit(messages: string list) =
+            let msgString = messages |> List.map (sprintf "-m \"%s\"") |> String.concat " "
+
+            $"commit {msgString}"
+            |> Git.CommandHelper.runSimpleGitCommand repoDir
+            |> Trace.trace
 
         member _.PushBranch branch =
-            Git.CommandHelper.gitCommandf path "push --set-upstream origin %s" branch
+            Git.CommandHelper.gitCommandf repoDir "push --set-upstream origin %s" branch
 
         member _.FetchTags() =
-            Git.CommandHelper.gitCommand path "fetch --tags --force"
+            Git.CommandHelper.gitCommand repoDir "fetch --tags --force"
 
         member _.ShowRefTags =
-            Git.CommandHelper.getGitResult path "show-ref --tags -d"
+            Git.CommandHelper.getGitResult repoDir "show-ref --tags -d"
             |> Seq.map (fun x ->
                 let chunks = x.Split(" ")
 
@@ -62,36 +70,36 @@ module Git =
                   IsCommit = chunks.[1].EndsWith("^{}") })
 
         member _.Pull() =
-            Git.CommandHelper.gitCommand path "pull"
+            Git.CommandHelper.gitCommand repoDir "pull"
 
-        member _.CurrentBranch = Git.Information.getBranchName path
-        member _.IsDirty = Git.Information.isCleanWorkingCopy path |> not
+        member _.CurrentBranch = Git.Information.getBranchName repoDir
+        member _.IsDirty = Git.Information.isCleanWorkingCopy repoDir |> not
 
         member _.CurrentHash =
-            Git.Information.getCurrentSHA1 path |> Git.Information.showName path
+            Git.Information.getCurrentSHA1 repoDir |> Git.Information.showName repoDir
 
-        member _.StageAll() = Git.Staging.stageAll path
+        member _.StageAll() = Git.Staging.stageAll repoDir
 
         member _.Stage(paths: string list) =
             for p in paths do
-                Git.Staging.stageFile path p |> ignore
+                Git.Staging.stageFile repoDir p |> ignore
 
         member _.Diff filePath refA refB =
             Git.CommandHelper.showGitCommand
-                path
+                repoDir
                 (sprintf "--no-pager diff --color --exit-code %s %s -- %s" refA refB filePath)
 
         member _.DiffNameOnly refA refB =
-            Git.CommandHelper.getGitResult path (sprintf "--no-pager diff --name-only --exit-code %s %s" refA refB)
+            Git.CommandHelper.getGitResult repoDir (sprintf "--no-pager diff --name-only --exit-code %s %s" refA refB)
 
         member _.DiffLocalFiles pathA pathB =
             (Git.CommandHelper.getGitResult
-                path
+                repoDir
                 (sprintf "--no-pager diff --color --no-index --exit-code -- %s %s" pathA pathB))
             |> Seq.iter (printfn "%s")
 
         member _.HttpsUrl =
-            let url = Git.CommandHelper.getGitResult path "config --get remote.origin.url"
+            let url = Git.CommandHelper.getGitResult repoDir "config --get remote.origin.url"
 
             match url.Head with
             | ParseRegex "git@(.*):(.*).git" [ uri; path ] -> sprintf "https://%s/%s" uri path
