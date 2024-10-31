@@ -32,10 +32,10 @@ module Git =
     type Repo(repoDir: string) =
 
         member _.AddRemote url =
-            Git.CommandHelper.gitCommandf repoDir "remote add origin %s" url
+            Git.CommandHelper.gitCommandf repoDir $"remote add origin %s{url}"
 
         member _.CheckoutTag tag =
-            Git.Branches.checkoutBranch repoDir (sprintf "tags/%s" tag)
+            Git.Branches.checkoutBranch repoDir $"tags/%s{tag}"
 
         member _.Checkout branch =
             Git.Branches.checkoutBranch repoDir branch
@@ -46,12 +46,18 @@ module Git =
         member _.Commit (author: string option) (messages: string list) =
             let msgString = messages |> List.map (sprintf "-m \"%s\"") |> String.concat " "
 
-            $"""commit {author |> Option.defaultValue ""} {msgString}"""
+            let authorFlag =
+                author |> Option.map (sprintf "--author %s") |> Option.defaultValue ""
+
+            $"""commit {authorFlag} {msgString}"""
             |> Git.CommandHelper.runSimpleGitCommand repoDir
             |> Trace.trace
 
         member _.PushBranch branch =
-            Git.CommandHelper.gitCommandf repoDir "push --set-upstream origin %s" branch
+            Git.CommandHelper.gitCommandf repoDir $"push --set-upstream origin %s{branch}"
+
+        member _.PushOrigin() =
+            Git.CommandHelper.gitCommandf repoDir "push origin"
 
         member _.FetchTags() =
             Git.CommandHelper.gitCommand repoDir "fetch --tags --force"
@@ -72,7 +78,9 @@ module Git =
             Git.CommandHelper.gitCommand repoDir "pull"
 
         member _.CurrentBranch() = Git.Information.getBranchName repoDir
-        member _.IsDirty() = Git.Information.isCleanWorkingCopy repoDir |> not
+
+        member _.IsDirty() =
+            Git.Information.isCleanWorkingCopy repoDir |> not
 
         member _.HasStagedChanges() =
 
@@ -104,7 +112,7 @@ module Git =
                 (sprintf "--no-pager diff --color --no-index --exit-code -- %s %s" pathA pathB))
             |> Seq.iter (printfn "%s")
 
-        member _.HttpsUrl()=
+        member _.HttpsUrl() =
             let url = Git.CommandHelper.getGitResult repoDir "config --get remote.origin.url"
 
             match url.Head with
