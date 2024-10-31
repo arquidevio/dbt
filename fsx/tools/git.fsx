@@ -47,7 +47,7 @@ module Git =
             let msgString = messages |> List.map (sprintf "-m \"%s\"") |> String.concat " "
 
             let authorFlag =
-                author |> Option.map (sprintf "--author %s") |> Option.defaultValue ""
+                author |> Option.map (sprintf "--author \"%s\"") |> Option.defaultValue ""
 
             $"""commit {authorFlag} {msgString}"""
             |> Git.CommandHelper.runSimpleGitCommand repoDir
