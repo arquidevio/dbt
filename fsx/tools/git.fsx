@@ -56,7 +56,7 @@ module Git =
         member _.FetchTags() =
             Git.CommandHelper.gitCommand repoDir "fetch --tags --force"
 
-        member _.ShowRefTags =
+        member _.ShowRefTags() =
             Git.CommandHelper.getGitResult repoDir "show-ref --tags -d"
             |> Seq.map (fun x ->
                 let chunks = x.Split(" ")
@@ -71,8 +71,8 @@ module Git =
         member _.Pull() =
             Git.CommandHelper.gitCommand repoDir "pull"
 
-        member _.CurrentBranch = Git.Information.getBranchName repoDir
-        member _.IsDirty = Git.Information.isCleanWorkingCopy repoDir |> not
+        member _.CurrentBranch() = Git.Information.getBranchName repoDir
+        member _.IsDirty() = Git.Information.isCleanWorkingCopy repoDir |> not
 
         member _.HasStagedChanges() =
 
@@ -81,7 +81,7 @@ module Git =
 
             not success
 
-        member _.CurrentHash =
+        member _.CurrentHash() =
             Git.Information.getCurrentSHA1 repoDir |> Git.Information.showName repoDir
 
         member _.StageAll() = Git.Staging.stageAll repoDir
@@ -104,7 +104,7 @@ module Git =
                 (sprintf "--no-pager diff --color --no-index --exit-code -- %s %s" pathA pathB))
             |> Seq.iter (printfn "%s")
 
-        member _.HttpsUrl =
+        member _.HttpsUrl()=
             let url = Git.CommandHelper.getGitResult repoDir "config --get remote.origin.url"
 
             match url.Head with
