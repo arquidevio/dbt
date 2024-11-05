@@ -77,6 +77,9 @@ module Git =
         member _.Pull() =
             Git.CommandHelper.gitCommand repoDir "pull"
 
+        member this.PullBranch() =
+            Git.CommandHelper.gitCommand repoDir $"pull origin {this.CurrentBranch()}"
+
         member _.CurrentBranch() = Git.Information.getBranchName repoDir
 
         member _.IsDirty() =
