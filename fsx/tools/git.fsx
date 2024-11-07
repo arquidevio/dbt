@@ -31,6 +31,10 @@ module Git =
 
     type Repo(repoDir: string) =
 
+        member _.ConfigSetUser(name: string, email: string) =
+            Git.CommandHelper.gitCommandf repoDir $"config user.name {name}"
+            Git.CommandHelper.gitCommandf repoDir $"config user.email {email}"
+
         member _.AddRemote url =
             Git.CommandHelper.gitCommandf repoDir $"remote add origin %s{url}"
 
