@@ -8,7 +8,7 @@ type Selector =
       isRequired: string -> bool
       isIgnored: string -> bool
       safeName: string -> string
-      expandLeafs: string -> string seq }
+      expandLeafs: Selector -> string -> string seq }
 
     static member internal Default =
         { kind = "none"
@@ -21,7 +21,7 @@ type Selector =
                 |> Path.GetDirectoryName
                 |> Path.GetFileName
                 |> fun p -> p.ToLowerInvariant().Replace(".", "-")
-          expandLeafs = Seq.singleton }
+          expandLeafs = fun _ path -> Seq.singleton path }
 
 type ProjectPath =
     { path: string

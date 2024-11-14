@@ -46,7 +46,7 @@ module Pipeline =
 
         dirPaths
         |> uniqueParentProjectPaths config.pattern
-        |> Seq.collect config.expandLeafs
+        |> Seq.collect (config.expandLeafs config)
         |> Seq.distinct
         |> Seq.filter (not << config.isIgnored)
         |> fun paths ->

@@ -54,6 +54,6 @@ module DotnetProject =
     let Selector slnPath =
         { config with
             expandLeafs =
-                fun path ->
+                fun selector path ->
                     let projs = Solution.makeDependencyTree slnPath
-                    path |> Solution.findLeafDependants projs config.isRequired }
+                    path |> Solution.findLeafDependants projs selector.isRequired }
