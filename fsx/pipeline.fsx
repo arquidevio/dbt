@@ -25,6 +25,7 @@ type Mode =
 [<RequireQualifiedAccess>]
 module Pipeline =
     open System.IO
+    open System.Text.RegularExpressions
 
     /// Find the closest ancestor dir of the originPath that contains a single file matching projectPattern
     let findParentProjectPath (projectPattern: string) (originPath: string) : string option =
@@ -45,6 +46,10 @@ module Pipeline =
     let findRequiredProjects (dirPaths: string seq) (config: Selector) =
 
         dirPaths
+        |> Seq.filter (fun path ->
+            config.preFilterRegexes
+            |> Seq.exists (fun pattern -> Regex.IsMatch(path, pattern))
+            |> not)
         |> uniqueParentProjectPaths config.pattern
         |> Seq.collect (config.expandLeafs config)
         |> Seq.distinct
