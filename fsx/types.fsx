@@ -5,7 +5,7 @@ open System.IO
 type Selector =
     { kind: string
       pattern: string
-      preFilterRegexes: string list
+      patternIgnores: string list
       isRequired: string -> bool
       isIgnored: string -> bool
       safeName: string -> string
@@ -14,7 +14,7 @@ type Selector =
     static member internal Default =
         { kind = "none"
           pattern = "none"
-          preFilterRegexes = []
+          patternIgnores = []
           isIgnored = fun _ -> false
           isRequired = fun _ -> true
           safeName =
