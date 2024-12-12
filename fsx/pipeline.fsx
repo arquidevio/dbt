@@ -28,9 +28,20 @@ module Pipeline =
     open System.Text.RegularExpressions
 
     /// Find the closest ancestor dir of the originPath that contains a single file matching projectPattern
-    let findParentProjectPath (projectPattern: string) (originPath: string) : string option =
+    let findParentProjectPath
+        (projectPattern: string)
+        (patternIgnores: string list)
+        (originPath: string)
+        : string option =
         let rec findParentProj (p: string) =
-            match Directory.EnumerateFiles(p, projectPattern) |> Seq.tryExactlyOne with
+            match
+                Directory.EnumerateFiles(p, projectPattern)
+                |> Seq.filter (fun path ->
+                    patternIgnores
+                    |> Seq.exists (fun pattern -> Regex.IsMatch(path, pattern))
+                    |> not)
+                |> Seq.tryExactlyOne
+            with
             | None ->
                 match Directory.GetParent(p) with
                 | null -> None
@@ -39,18 +50,11 @@ module Pipeline =
 
         findParentProj originPath
 
-    /// Find unique parent projects (determined by existence of a single file matching projectPattern) of the given dirs
-    let uniqueParentProjectPaths (projectPattern: string) (dirs: string seq) : string seq =
-        dirs |> Seq.choose (findParentProjectPath projectPattern) |> Seq.distinct
-
     let findRequiredProjects (dirPaths: string seq) (config: Selector) =
 
         dirPaths
-        |> Seq.filter (fun path ->
-            config.preFilterRegexes
-            |> Seq.exists (fun pattern -> Regex.IsMatch(path, pattern))
-            |> not)
-        |> uniqueParentProjectPaths config.pattern
+        |> Seq.choose (findParentProjectPath config.pattern config.patternIgnores)
+        |> Seq.distinct
         |> Seq.collect (config.expandLeafs config)
         |> Seq.distinct
         |> Seq.filter (not << config.isIgnored)
