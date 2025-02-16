@@ -1,2 +1,2 @@
-image = "ghcr.io/queil/image:dotnet-8"
+image = "ghcr.io/queil/image"
 caches = ["~/.nuget"]
