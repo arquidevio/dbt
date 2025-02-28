@@ -3,7 +3,7 @@
   "isRoot": true,
   "tools": {
     "fsy": {
-      "version": "0.11.0",
+      "version": "0.16.0",
       "commands": [
         "fsy"
       ]

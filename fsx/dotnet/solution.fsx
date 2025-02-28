@@ -1,5 +1,5 @@
 #r "paket: 
-      nuget Ionide.ProjInfo ~> 0.67
+      nuget Ionide.ProjInfo ~> 0.70
       nuget Fake.Core.Process ~> 6.0
 "
 
@@ -20,7 +20,7 @@ module Solution =
     let private getSlnData slnPath =
         let result = tryParseSln slnPath
 
-        let _, data =
+        let data =
             match result with
             | Ok x -> x
             | Error e -> failwith e.Message
@@ -44,7 +44,7 @@ module Solution =
 
         let rec projs (item: SolutionItem) =
             match item.Kind with
-            | MsbuildFormat _ ->
+            | MSBuildFormat _ ->
                 [ match projectFilter item.Name with
                   | true -> Some item.Name
                   | _ -> None ]
@@ -79,7 +79,7 @@ module Solution =
 
         let rec projs (item: SolutionItem) =
             match item.Kind with
-            | MsbuildFormat _ -> [ getProjReferenceDeps item.Name |> Seq.map (fun k -> (k, item.Name)) ]
+            | MSBuildFormat _ -> [ getProjReferenceDeps item.Name |> Seq.map (fun k -> (k, item.Name)) ]
             | Folder(items, _) -> items |> List.collect projs
             | Unsupported
             | Unknown -> []
