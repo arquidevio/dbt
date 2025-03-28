@@ -3,7 +3,7 @@ namespace Arquidev.Dbt
 open System.IO
 
 [<RequireQualifiedAccess>]
-module Fs = 
+module Fs =
 
     type WorkingDir(workingDir: string) =
         let originalDir = Directory.GetCurrentDirectory()

@@ -3,10 +3,11 @@
   "isRoot": true,
   "tools": {
     "fsy": {
-      "version": "0.16.0",
+      "version": "0.18.0",
       "commands": [
         "fsy"
-      ]
+      ],
+      "rollForward": false
     }
   }
 }

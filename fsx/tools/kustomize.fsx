@@ -14,8 +14,13 @@ module Kustomize =
         |> Proc.run
         |> fun out -> out.Result.Output.Trim()
 
-    let ensureVersion (requiredVersion:string) =
-        let requiredVersion = if requiredVersion.StartsWith("v") then requiredVersion else $"v{requiredVersion}"
+    let ensureVersion (requiredVersion: string) =
+        let requiredVersion =
+            if requiredVersion.StartsWith("v") then
+                requiredVersion
+            else
+                $"v{requiredVersion}"
+
         let detectedVersion = version ()
 
         if detectedVersion <> requiredVersion then
