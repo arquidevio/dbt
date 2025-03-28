@@ -32,7 +32,9 @@ jobs:
           ~/.nuget
         key: ${{ steps.cache-tools-restore.outputs.cache-primary-key }}
 
-    - run: |
+    - name: tests
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
         dotnet fsy -v run --force tests/test.fsx
         dotnet fsy -v run --force tests/ci/test-last-success.fsx
-
