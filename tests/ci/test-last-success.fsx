@@ -5,14 +5,6 @@ open FsHttp
 
 Fsi.enableDebugLogs ()
 
-let value =
-    Github.getLastSuccessCommitHash
-        "arquidevio"
-        "dbt"
-        "test.yaml"
-        (System.Environment.GetEnvironmentVariable "GITHUB_TOKEN")
-        "main"
-
-match value with
+match Github.getLastSuccessCommitHash () with
 | Some hash -> printfn $"%s{hash}"
 | None -> failwithf "Not sure what the last successful build commit is"
