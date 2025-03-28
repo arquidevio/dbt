@@ -49,7 +49,7 @@ module Git =
                 | Some "0000000000000000000000000000000000000000" ->
                     Trace.tracef "Base revisions(s): "
                     let output = git pwd $$"""show --no-patch --format="%P" {{currentCommit}}"""
-                    output.Split(' ') |> Seq.toList
+                    output.Split ' ' |> Seq.toList
                 | Some ref ->
                     Trace.tracefn $"Base revision override: {ref}"
                     [ ref ]
@@ -75,7 +75,7 @@ module Git =
 
         dirs
         |> Seq.filter (fun p ->
-            if Directory.Exists(p) then
+            if Directory.Exists p then
                 true
             else
                 Trace.traceImportantfn $"WARNING: path '%s{p}' no longer exists in the repository. Ignoring."

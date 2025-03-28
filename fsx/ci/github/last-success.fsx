@@ -2,8 +2,7 @@ namespace Arquidev.Dbt
 
 #r "paket:
         nuget FsHttp ~> 15
-        nuget Fake.Core.Environment ~> 6
-"
+        nuget Fake.Core.Environment ~> 6"
 
 open FsHttp
 open Fake.Core
@@ -27,32 +26,28 @@ module Github =
 
         let env = getEnv ()
 
+        let gh =
+            http {
+                Authorization $"token {env.GITHUB_TOKEN}"
+                Accept "application/vnd.github+json"
+                UserAgent "FsHttp"
+            }
+
         let workflowRuns () =
             let workflowId =
                 env.GITHUB_WORKFLOW_REF.Split "@" |> Seq.head |> _.Split("/") |> Seq.last
 
-            http {
+            gh {
                 GET
                     $"""https://api.github.com/repos/{env.GITHUB_REPOSITORY}/actions/workflows/{workflowId}/runs?status=success&branch={env.GITHUB_REF_NAME}&page=1&per_page=10"""
-
-                Authorization $"token {env.GITHUB_TOKEN}"
-                Accept "application/vnd.github+json"
-                UserAgent "FsHttp"
-                print_withResponseBodyExpanded
             }
             |> Request.send
             |> Response.assertOk
             |> Response.deserializeJson<{| workflow_runs: WorkflowRun[] |}>
             |> _.workflow_runs
 
-
         let workflowRunJobs (runId: int64) =
-            http {
-                GET $"https://api.github.com/repos/{env.GITHUB_REPOSITORY}/actions/runs/{runId}/jobs"
-                Authorization $"token {env.GITHUB_TOKEN}"
-                Accept "application/vnd.github+json"
-                UserAgent "FsHttp"
-            }
+            gh { GET $"https://api.github.com/repos/{env.GITHUB_REPOSITORY}/actions/runs/{runId}/jobs" }
             |> Request.send
             |> Response.deserializeJson<{| jobs: Job[] |}>
             |> _.jobs
