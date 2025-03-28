@@ -21,16 +21,19 @@ module Github =
         {| GITHUB_REPOSITORY = Environment.environVarOrFail "GITHUB_REPOSITORY"
            GITHUB_TOKEN = Environment.environVarOrFail "GITHUB_TOKEN"
            GITHUB_REF_NAME = Environment.environVarOrFail "GITHUB_REF_NAME"
-           GITHUB_WORKFLOW = Environment.environVarOrFail "GITHUB_WORKFLOW" |}
+           GITHUB_WORKFLOW_REF = Environment.environVarOrFail "GITHUB_WORKFLOW_REF" |}
 
     let getLastSuccessCommitHash () =
 
         let env = getEnv ()
 
         let workflowRuns () =
+            let workflowId =
+                env.GITHUB_WORKFLOW_REF.Split "@" |> Seq.head |> _.Split("/") |> Seq.last
+
             http {
                 GET
-                    $"""https://api.github.com/repos/{env.GITHUB_REPOSITORY}/actions/workflows/{env.GITHUB_WORKFLOW}/runs?status=success&branch={env.GITHUB_REF_NAME}&page=1&per_page=10"""
+                    $"""https://api.github.com/repos/{env.GITHUB_REPOSITORY}/actions/workflows/{workflowId}/runs?status=success&branch={env.GITHUB_REF_NAME}&page=1&per_page=10"""
 
                 Authorization $"token {env.GITHUB_TOKEN}"
                 Accept "application/vnd.github+json"
