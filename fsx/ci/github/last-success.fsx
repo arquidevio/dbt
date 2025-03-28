@@ -2,10 +2,11 @@ namespace Arquidev.Dbt
 
 #r "paket:
         nuget FsHttp ~> 15
+        nuget Fake.Core.Environment ~> 6
 "
 
 open FsHttp
-
+open Fake.Core
 
 type Step = { conclusion: string option }
 
@@ -16,14 +17,22 @@ type WorkflowRun = { id: int64; head_sha: string }
 [<RequireQualifiedAccess>]
 module Github =
 
-    let getLastSuccessCommitHash (owner: string) (repo: string) (workflowId: string) (token: string) (branch: string) =
+    let getEnv () =
+        {| GITHUB_REPOSITORY = Environment.environVarOrFail "GITHUB_REPOSITORY"
+           GITHUB_TOKEN = Environment.environVarOrFail "GITHUB_TOKEN"
+           GITHUB_REF_NAME = Environment.environVarOrFail "GITHUB_REF_NAME"
+           GITHUB_WORKFLOW = Environment.environVarOrFail "GITHUB_WORKFLOW" |}
+
+    let getLastSuccessCommitHash () =
+
+        let env = getEnv ()
 
         let workflowRuns () =
             http {
                 GET
-                    $"https://api.github.com/repos/{owner}/{repo}/actions/workflows/{workflowId}/runs?status=success&branch={branch}&page=1&per_page=10"
+                    $"""https://api.github.com/repos/{env.GITHUB_REPOSITORY}/actions/workflows/{env.GITHUB_WORKFLOW}/runs?status=success&branch={env.GITHUB_REF_NAME}&page=1&per_page=10"""
 
-                Authorization $"token {token}"
+                Authorization $"token {env.GITHUB_TOKEN}"
                 Accept "application/vnd.github+json"
                 UserAgent "FsHttp"
                 print_withResponseBodyExpanded
@@ -36,8 +45,8 @@ module Github =
 
         let workflowRunJobs (runId: int64) =
             http {
-                GET $"https://api.github.com/repos/{owner}/{repo}/actions/runs/{runId}/jobs"
-                Authorization $"token {token}"
+                GET $"https://api.github.com/repos/{env.GITHUB_REPOSITORY}/actions/runs/{runId}/jobs"
+                Authorization $"token {env.GITHUB_TOKEN}"
                 Accept "application/vnd.github+json"
                 UserAgent "FsHttp"
             }
