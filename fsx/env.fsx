@@ -44,6 +44,17 @@ module Env =
                             | s -> unbox<'R> (Some(parser<'a> s)) }
 
             optionElementParser value
+        | Shape.FSharpUnion (:? ShapeFSharpUnion<'R> as shape) ->
+            if shape.UnionCases |> Seq.exists ( fun c -> c.Arity > 0) then
+                failwithf "Only enum unions are supported"
+            let unionParser = fun s ->
+               let maybeValue = 
+                 shape.UnionCases |> Seq.tryFind (fun c -> String.Equals(c.CaseInfo.Name, s, StringComparison.OrdinalIgnoreCase))
+                 |> Option.map (fun c -> c.CreateUninitialized())
+               match maybeValue with
+               | Some v -> v
+               | None -> failwithf $"Union {typeof<'R>} contains no such case: {s}"
+            unionParser value
         | _ ->
             if String.IsNullOrEmpty value then
                 failwithf $"Environment variable is not set: {label}"

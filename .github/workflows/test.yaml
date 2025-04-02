@@ -38,6 +38,11 @@ jobs:
       run: |
         dotnet fsy -v run --force tests/test.fsx
         dotnet fsy -v run --force tests/ci/test-last-success.fsx
-        REQUIRED_INT=1 REQUIRED_EXISTS=tt OPTIONAL_EXISTS=XTYh1345 REQUIRED_EXISTS=4t9v7 NORMAL_RECORD=123 BOOL_TRUE=TRUE BOOL_FALSE=FALSE BOOL_TRUE_L=true BOOL_FALSE_L=false BOOL_1=1 BOOL_0=0 BOOL_YES=YES BOOL_NO=NO BOOL_Y=Y BOOL_N=N \
+        
+        REQUIRED_INT=1 REQUIRED_EXISTS=tt OPTIONAL_EXISTS=XTYh1345 \
+        REQUIRED_EXISTS=4t9v7 NORMAL_RECORD=123 BOOL_TRUE=TRUE \
+        BOOL_FALSE=FALSE BOOL_TRUE_L=true BOOL_FALSE_L=false BOOL_1=1 \
+        BOOL_0=0 BOOL_YES=YES BOOL_NO=NO BOOL_Y=Y BOOL_N=N \
+        UNION_VALUE=sparta \
           dotnet fsy -v run --force tests/test-env.fsx
 

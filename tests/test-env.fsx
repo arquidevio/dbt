@@ -44,13 +44,19 @@ let booleanEnv =
            BOOL_N: bool |}
      > ()
 
-"BOOL_TRUE" |> Expect.equal booleanEnv.BOOL_TRUE true
-"BOOL_FALSE" |> Expect.equal booleanEnv.BOOL_FALSE false
-"BOOL_TRUE_L" |> Expect.equal booleanEnv.BOOL_TRUE_L true
-"BOOL_FALSE_L" |> Expect.equal booleanEnv.BOOL_FALSE_L false
-"BOOL_1" |> Expect.equal booleanEnv.BOOL_1 true
-"BOOL_0" |> Expect.equal booleanEnv.BOOL_0 false
-"BOOL_YES" |> Expect.equal booleanEnv.BOOL_YES true
-"BOOL_NO" |> Expect.equal booleanEnv.BOOL_NO false
-"BOOL_Y" |> Expect.equal booleanEnv.BOOL_Y true
-"BOOL_N" |> Expect.equal booleanEnv.BOOL_N false
+"BOOL_TRUE - unexpected value" |> Expect.equal booleanEnv.BOOL_TRUE true
+"BOOL_FALSE - unexpected value" |> Expect.equal booleanEnv.BOOL_FALSE false
+"BOOL_TRUE_L - unexpected value" |> Expect.equal booleanEnv.BOOL_TRUE_L true
+"BOOL_FALSE_L - unexpected value" |> Expect.equal booleanEnv.BOOL_FALSE_L false
+"BOOL_1 - unexpected value" |> Expect.equal booleanEnv.BOOL_1 true
+"BOOL_0 - unexpected value" |> Expect.equal booleanEnv.BOOL_0 false
+"BOOL_YES - unexpected value" |> Expect.equal booleanEnv.BOOL_YES true
+"BOOL_NO - unexpected value" |> Expect.equal booleanEnv.BOOL_NO false
+"BOOL_Y - unexpected value" |> Expect.equal booleanEnv.BOOL_Y true
+"BOOL_N - unexpected value" |> Expect.equal booleanEnv.BOOL_N false
+
+type MyUnion = This | Is | Sparta
+
+let duEnv = Env.get<{|UNION_VALUE: MyUnion |}> ()
+
+"UNION_VALUE" |> Expect.equal duEnv.UNION_VALUE Sparta
