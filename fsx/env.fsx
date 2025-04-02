@@ -5,6 +5,7 @@ namespace Arquidev.Dbt
 open TypeShape.Core
 open System
 
+[<RequireQualifiedAccess>]
 module Env =
 
     let private parser<'V> : string -> 'V =
@@ -16,8 +17,16 @@ module Env =
             | Shape.Int32 -> wrap Int32.Parse
             | Shape.Bool ->
                 wrap (function
-                    | "true" | "TRUE" | "1" | "YES" | "Y" -> true
-                    | "false" | "FALSE" | "0" | "NO" | "N" -> false
+                    | "true"
+                    | "TRUE"
+                    | "1"
+                    | "YES"
+                    | "Y" -> true
+                    | "false"
+                    | "FALSE"
+                    | "0"
+                    | "NO"
+                    | "N" -> false
                     | b -> failwithf $"Value {b} is not a valid boolean")
             | shape -> failwithf $"Not supported: {shape}"
 

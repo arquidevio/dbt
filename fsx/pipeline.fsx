@@ -43,7 +43,7 @@ module Pipeline =
                 |> Seq.tryExactlyOne
             with
             | None ->
-                match Directory.GetParent(p) with
+                match Directory.GetParent p with
                 | null -> None
                 | p -> findParentProj p.FullName
             | Some proj -> Some(proj |> Path.GetFullPath)
