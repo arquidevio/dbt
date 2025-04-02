@@ -1,8 +1,7 @@
-namespace Arquidev.Dbt
-
 #load "../../env.fsx"
 #r "paket: nuget FsHttp ~> 15"
 
+namespace Arquidev.Dbt
 
 open FsHttp
 
