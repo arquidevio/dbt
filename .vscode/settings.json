@@ -3,7 +3,9 @@
         "editor.inlayHints.enabled": "off"
     },
     "cSpell.words": [
+        "abbrev",
         "Importantfn",
+        "logfn",
         "objnull",
         "paket",
         "Queil",

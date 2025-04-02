@@ -55,8 +55,11 @@ let booleanEnv =
 "BOOL_Y - unexpected value" |> Expect.equal booleanEnv.BOOL_Y true
 "BOOL_N - unexpected value" |> Expect.equal booleanEnv.BOOL_N false
 
-type MyUnion = This | Is | Sparta
+type MyUnion =
+    | This
+    | Is
+    | Sparta
 
-let duEnv = Env.get<{|UNION_VALUE: MyUnion |}> ()
+let duEnv = Env.get<{| UNION_VALUE: MyUnion |}> ()
 
 "UNION_VALUE" |> Expect.equal duEnv.UNION_VALUE Sparta
