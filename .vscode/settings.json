@@ -1,0 +1,13 @@
+{
+    "[fsharp]": {
+        "editor.inlayHints.enabled": "off"
+    },
+    "cSpell.words": [
+        "Importantfn",
+        "objnull",
+        "paket",
+        "Queil",
+        "shapeof",
+        "tracefn"
+    ]
+}
