@@ -5,6 +5,7 @@ namespace Arquidev.Dbt
 open TypeShape.Core
 open System
 
+[<RequireQualifiedAccess>]
 module Env =
 
     let private parser<'V> : string -> 'V =

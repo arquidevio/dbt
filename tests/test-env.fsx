@@ -1,6 +1,4 @@
-#r "paket: 
-    nuget Expecto ~> 10
-"
+#r "paket: nuget Expecto ~> 10"
 #load "../fsx/env.fsx"
 
 open Expecto

@@ -1,11 +1,10 @@
 namespace Arquidev.Dbt
 
-#r "paket:
-        nuget FsHttp ~> 15
-        nuget Fake.Core.Environment ~> 6"
+#load "../../env.fsx"
+#r "paket: nuget FsHttp ~> 15"
+
 
 open FsHttp
-open Fake.Core
 
 type Step = { conclusion: string option }
 
@@ -16,15 +15,15 @@ type WorkflowRun = { id: int64; head_sha: string }
 [<RequireQualifiedAccess>]
 module Github =
 
-    let getEnv () =
-        {| GITHUB_REPOSITORY = Environment.environVarOrFail "GITHUB_REPOSITORY"
-           GITHUB_TOKEN = Environment.environVarOrFail "GITHUB_TOKEN"
-           GITHUB_REF_NAME = Environment.environVarOrFail "GITHUB_REF_NAME"
-           GITHUB_WORKFLOW_REF = Environment.environVarOrFail "GITHUB_WORKFLOW_REF" |}
-
     let getLastSuccessCommitHash () =
 
-        let env = getEnv ()
+        let env =
+            Env.get<
+                {| GITHUB_REPOSITORY: string
+                   GITHUB_TOKEN: string
+                   GITHUB_REF_NAME: string
+                   GITHUB_WORKFLOW_REF: string |}
+             > ()
 
         let gh =
             http {
