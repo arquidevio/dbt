@@ -7,12 +7,40 @@ open FsHttp
 
 type Step = { conclusion: string option }
 
-type Job = { steps: Step[] }
+type Job = { steps: Step list }
 
 type WorkflowRun = { id: int64; head_sha: string }
 
+type WorkflowRunDiscovery =
+    | HeadSha of string
+    | NoneSuccessful
+    | NoneFound
+
 [<RequireQualifiedAccess>]
-module Github =
+module LastSuccessSha =
+
+    let internal logic (runs: unit -> WorkflowRun list) (jobs: int64 -> Job list) =
+
+        match runs () with
+        | [] -> NoneFound
+        | runs ->
+
+            runs
+            |> Seq.sortByDescending _.id
+            |> Seq.tryFind (fun r ->
+
+                match jobs r.id with
+                | [] -> false
+                | jobs ->
+                    jobs
+                    |> Seq.forall (fun j ->
+                        match j.steps with
+                        | [] -> false
+                        | steps -> steps |> Seq.forall (fun s -> s.conclusion = Some "success"))
+
+            )
+            |> Option.map (fun r -> HeadSha r.head_sha)
+            |> Option.defaultValue NoneSuccessful
 
     let getLastSuccessCommitHash () =
 
@@ -41,25 +69,13 @@ module Github =
             }
             |> Request.send
             |> Response.assertOk
-            |> Response.deserializeJson<{| workflow_runs: WorkflowRun[] |}>
+            |> Response.deserializeJson<{| workflow_runs: WorkflowRun list |}>
             |> _.workflow_runs
 
         let workflowRunJobs (runId: int64) =
             gh { GET $"https://api.github.com/repos/{env.GITHUB_REPOSITORY}/actions/runs/{runId}/jobs" }
             |> Request.send
-            |> Response.deserializeJson<{| jobs: Job[] |}>
+            |> Response.deserializeJson<{| jobs: Job list |}>
             |> _.jobs
 
-        query {
-            for r in workflowRuns () do
-                where (
-                    query {
-                        for j in workflowRunJobs r.id do
-                            for s in j.steps do
-                                all (s.conclusion = Some "success")
-                    }
-                )
-
-                select r.head_sha
-        }
-        |> Seq.tryHead
+        logic workflowRuns workflowRunJobs
