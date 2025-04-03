@@ -73,11 +73,13 @@ module Pipeline =
             match env.DBT_MODE with
             | Diff ->
                 Trace.traceHeader "GIT CHANGE SET"
+
                 try
                     let lastSuccessfullyBuiltSha = LastSuccessSha.getLastSuccessCommitHash ()
                     printfn $"TEST ONLY: {lastSuccessfullyBuiltSha}"
-                with
-                | _ -> ()
+                with _ ->
+                    ()
+
                 Env.get<GitDiffEnv> () |> Git.dirsFromDiff
             | All -> Git.allDirs ()
 
