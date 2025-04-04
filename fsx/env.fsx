@@ -65,6 +65,9 @@ module Env =
                             String.Equals(c.CaseInfo.Name, caseName, StringComparison.OrdinalIgnoreCase))
                         |> Option.map (fun c -> c.CreateUninitialized())
 
+                    let possibleValues =
+                        shape.UnionCases |> Seq.map _.CaseInfo.Name |> Seq.toList |> String.concat ", "
+
                     match maybeValue s with
                     | Some v -> v
                     | None ->
@@ -72,8 +75,12 @@ module Env =
                         | Some d ->
                             match maybeValue d with
                             | Some v -> v
-                            | None -> failwithf $"Union {typeof<'R>} contains no such case: {d} (DefaultValue)"
-                        | None -> failwithf $"Union {typeof<'R>} contains no such case: {s}"
+                            | None ->
+                                failwithf
+                                    $"Unexpected default value for env variable: {label}={d}. Possible values: {possibleValues} (case-insensitive)"
+                        | None ->
+                            failwithf
+                                $"Unexpected value for env variable: {label}={s}. Possible values: {possibleValues} (case-insensitive)"
 
             unionParser value
         | _ ->

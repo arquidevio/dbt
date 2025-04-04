@@ -13,10 +13,9 @@ type Mode =
     | All
     | Diff
 
-type PipelineEnv = {
-    [<Default(nameof(Diff))>]
-    DBT_MODE: Mode
-}
+type PipelineEnv =
+    { [<Default(nameof (Diff))>]
+      DBT_MODE: Mode }
 
 [<RequireQualifiedAccess>]
 module Pipeline =
