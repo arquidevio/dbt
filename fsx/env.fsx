@@ -5,8 +5,16 @@ namespace Arquidev.Dbt
 open TypeShape.Core
 open System
 
+[<AttributeUsageAttribute(AttributeTargets.Property)>]
+type DefaultAttribute(value: string) =
+    inherit Attribute()
+
+    member _.Value = value
+
+
 [<RequireQualifiedAccess>]
 module Env =
+
 
     let private parser<'V> : string -> 'V =
         fun s ->
@@ -30,7 +38,7 @@ module Env =
                     | b -> failwithf $"Value {b} is not a valid boolean")
             | shape -> failwithf $"Not supported: {shape}"
 
-    let private getValue<'R> label =
+    let private getValue<'R> label (defaultValue: string option) =
         let value = Environment.GetEnvironmentVariable label
 
         match shapeof<'R> with
@@ -50,19 +58,29 @@ module Env =
 
             let unionParser =
                 fun s ->
-                    let maybeValue =
+                    let maybeValue (caseName: string) =
                         shape.UnionCases
-                        |> Seq.tryFind (fun c -> String.Equals(c.CaseInfo.Name, s, StringComparison.OrdinalIgnoreCase))
+                        |> Seq.tryFind (fun c ->
+                            String.Equals(c.CaseInfo.Name, caseName, StringComparison.OrdinalIgnoreCase))
                         |> Option.map (fun c -> c.CreateUninitialized())
 
-                    match maybeValue with
+                    match maybeValue s with
                     | Some v -> v
-                    | None -> failwithf $"Union {typeof<'R>} contains no such case: {s}"
+                    | None ->
+                        match defaultValue with
+                        | Some d ->
+                            match maybeValue d with
+                            | Some v -> v
+                            | None -> failwithf $"Union {typeof<'R>} contains no such case: {d} (DefaultValue)"
+                        | None -> failwithf $"Union {typeof<'R>} contains no such case: {s}"
 
             unionParser value
         | _ ->
-            if String.IsNullOrEmpty value then
-                failwithf $"Environment variable is not set: {label}"
+            let value =
+                match value, defaultValue with
+                | s, Some d when String.IsNullOrEmpty s -> d |> string
+                | s, None when String.IsNullOrEmpty s -> failwithf $"Environment variable is not set: {label}"
+                | s, _ -> s
 
             parser<'R> value
 
@@ -79,7 +97,16 @@ module Env =
                             { new IMemberVisitor<'T, ('T -> 'T) list> with
                                 member _.Visit(shape: ShapeMember<'T, 'a>) =
                                     (fun r ->
-                                        let fieldValue = getValue<'a> field.Label
+                                        let defaultValue =
+                                            let attr =
+                                                field.MemberInfo.GetCustomAttributes(typeof<DefaultAttribute>, false)
+
+                                            (match attr with
+                                             | [| :? DefaultAttribute as found |] -> Some found
+                                             | _ -> None)
+                                            |> Option.map _.Value
+
+                                        let fieldValue = getValue<'a> field.Label defaultValue
                                         shape.Set r fieldValue)
                                     :: setters })
                     []
