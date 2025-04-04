@@ -23,6 +23,7 @@ module Env =
             match shapeof<'V> with
             | Shape.String -> wrap id
             | Shape.Int32 -> wrap Int32.Parse
+            | Shape.Int64 -> wrap Int64.Parse
             | Shape.Bool ->
                 wrap (function
                     | "true"
