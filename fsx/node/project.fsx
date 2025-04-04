@@ -1,6 +1,6 @@
-namespace Arquidev.Dbt
-
 #load "../types.fsx"
+
+namespace Arquidev.Dbt
 
 [<RequireQualifiedAccess>]
 module NodeProject =

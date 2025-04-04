@@ -1,6 +1,5 @@
 #r "paket:
   nuget Fake.Tools.Git ~> 6.0
-  nuget Fake.Core.Environment ~> 6.0
   nuget Fake.Core.Trace ~> 6.0"
 
 namespace Arquidev.Dbt
@@ -9,20 +8,14 @@ open Fake.Core
 open Fake.Tools.Git
 open System.IO
 
-type DiffSpec =
-    { CurrentCommit: string option
-      BaseCommit: string option
-      MaybeTag: string option }
-
-    static member FromEnv() =
-        { CurrentCommit = Environment.environVarOrNone "DBT_CURRENT_COMMIT"
-          BaseCommit = Environment.environVarOrNone "DBT_BASE_COMMIT"
-          MaybeTag = Environment.environVarOrNone "DBT_MAYBE_TAG" }
+type GitDiffEnv =
+    { DBT_CURRENT_COMMIT: string option
+      DBT_BASE_COMMIT: string option
+      DBT_MAYBE_TAG: string option }
 
 [<RequireQualifiedAccess>]
 module Git =
 
-    let env = Environment.environVarOrDefault
     let pwd = Directory.GetCurrentDirectory()
     let git = CommandHelper.runSimpleGitCommand
 
@@ -31,15 +24,15 @@ module Git =
         |> Seq.map (snd >> FileInfo >> (fun f -> Path.GetRelativePath(pwd, f.Directory.FullName)))
         |> Seq.filter ((<>) ".")
 
-    let dirsFromDiff (spec: DiffSpec) : string seq =
+    let dirsFromDiff (spec: GitDiffEnv) : string seq =
 
-        let currentCommit = spec.CurrentCommit |> Option.defaultValue "HEAD"
-        let baseCommit = spec.BaseCommit
+        let currentCommit = spec.DBT_CURRENT_COMMIT |> Option.defaultValue "HEAD"
+        let baseCommit = spec.DBT_BASE_COMMIT
 
         Trace.tracefn $"Current revision: %s{currentCommit}"
 
         let baseRefs =
-            match spec.MaybeTag with
+            match spec.DBT_MAYBE_TAG with
             | Some currentTag ->
                 Trace.logfn $"Tag: %s{currentTag}"
                 [ git pwd $"describe --abbrev=0 --tags {currentTag}^" ]

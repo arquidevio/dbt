@@ -1,5 +1,4 @@
-#r "paket: 
-    nuget Queil.FsYaml ~> 5.0"
+#r "paket: nuget Queil.FsYaml ~> 5.0"
 
 namespace Arquidev.Dbt
 
