@@ -13,6 +13,11 @@ type Mode =
     | All
     | Diff
 
+type PipelineEnv = {
+    [<Default(nameof(Diff))>]
+    DBT_MODE: Mode
+}
+
 [<RequireQualifiedAccess>]
 module Pipeline =
     open System.IO
@@ -66,7 +71,7 @@ module Pipeline =
               safeName = config.safeName p })
 
     let run (selectors: Selector list) =
-        let env = Env.get<{| DBT_MODE: Mode |}> ()
+        let env = Env.get<PipelineEnv> ()
         Trace.tracefn $"Mode: %s{env.DBT_MODE.ToString().ToLower()}"
 
         let dirs =
