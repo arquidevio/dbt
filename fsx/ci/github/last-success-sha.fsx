@@ -78,4 +78,8 @@ module LastSuccessSha =
             |> Response.deserializeJson<{| jobs: Job list |}>
             |> _.jobs
 
-        logic workflowRuns workflowRunJobs
+        try
+            Fsi.enableDebugLogs()
+            logic workflowRuns workflowRunJobs
+        finally
+            Fsi.disableDebugLogs()
