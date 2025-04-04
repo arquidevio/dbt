@@ -2,9 +2,9 @@
 
 namespace Arquidev.Dbt
 
-#load env.fsx
-#load git.fsx
-#load types.fsx
+#load "env.fsx"
+#load "git.fsx"
+#load "types.fsx"
 #load "ci/github/last-success-sha.fsx"
 
 open Fake.Core
