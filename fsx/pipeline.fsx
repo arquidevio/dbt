@@ -81,8 +81,8 @@ module Pipeline =
                 try
                     let lastSuccessfullyBuiltSha = LastSuccessSha.getLastSuccessCommitHash ()
                     printfn $"TEST ONLY: {lastSuccessfullyBuiltSha}"
-                with _ ->
-                    ()
+                with ex ->
+                    printfn "WARN: experiment failed\n%A" ex
 
                 Env.get<GitDiffEnv> () |> Git.dirsFromDiff
             | All -> Git.allDirs ()
