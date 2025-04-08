@@ -6,6 +6,7 @@ namespace Arquidev.Dbt
 #load "git.fsx"
 #load "types.fsx"
 #load "ci/github/last-success-sha.fsx"
+#load "experiment.fsx"
 
 open Fake.Core
 
@@ -77,12 +78,10 @@ module Pipeline =
             match env.DBT_MODE with
             | Diff ->
                 Trace.traceHeader "GIT CHANGE SET"
-
-                try
-                    let lastSuccessfullyBuiltSha = LastSuccessSha.getLastSuccessCommitHash ()
-                    printfn $"TEST ONLY: {lastSuccessfullyBuiltSha}"
-                with ex ->
-                    printfn "WARN: experiment failed\n%A" ex
+                Experiment.run "last-success-sha" "DBT_EXPERIMENT_LAST_SUCCESS_SHA"
+                    <| fun () -> 
+                        let lastSuccessfullyBuiltSha = LastSuccessSha.getLastSuccessCommitHash ()
+                        printfn $"TEST ONLY: {lastSuccessfullyBuiltSha}"
 
                 Env.get<GitDiffEnv> () |> Git.dirsFromDiff
             | All -> Git.allDirs ()
