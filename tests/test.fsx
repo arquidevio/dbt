@@ -1,3 +1,4 @@
+#load "../fsx/env.fsx"
 #load "../fsx/git.fsx"
 #load "../fsx/dotnet/project.fsx"
 #load "../fsx/dotnet/solution.fsx"
@@ -8,4 +9,4 @@
 
 open Arquidev.Dbt
 
-Git.dirsFromDiff (DiffSpec.FromEnv())
+Git.dirsFromDiff (Env.get<GitDiffEnv> ())

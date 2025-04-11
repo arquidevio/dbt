@@ -1,11 +1,12 @@
-#r "paket:
-        nuget Fake.Core.Environment ~> 6.0
-        nuget Fake.Core.Trace ~> 6.0"
+#r "paket: nuget Fake.Core.Trace ~> 6.0"
 
 namespace Arquidev.Dbt
 
+#load "env.fsx"
 #load "git.fsx"
 #load "types.fsx"
+#load "ci/github/last-success-sha.fsx"
+#load "experiment.fsx"
 
 open Fake.Core
 
@@ -13,14 +14,9 @@ type Mode =
     | All
     | Diff
 
-    static member Parse(value: string) =
-        match value with
-        | "all" -> All
-        | "diff" -> Diff
-        | m -> failwithf $"Mode not supported: %s{m}"
-
-    static member FromEnv() =
-        Environment.environVarOrDefault "DBT_MODE" "diff" |> Mode.Parse
+type PipelineEnv =
+    { [<Default(nameof (Diff))>]
+      DBT_MODE: Mode }
 
 [<RequireQualifiedAccess>]
 module Pipeline =
@@ -75,14 +71,19 @@ module Pipeline =
               safeName = config.safeName p })
 
     let run (selectors: Selector list) =
-        let mode = Mode.FromEnv()
-        Trace.tracefn $"Mode: %s{mode.ToString().ToLower()}"
+        let env = Env.get<PipelineEnv> ()
+        Trace.tracefn $"Mode: %s{env.DBT_MODE.ToString().ToLower()}"
 
         let dirs =
-            match mode with
+            match env.DBT_MODE with
             | Diff ->
                 Trace.traceHeader "GIT CHANGE SET"
-                DiffSpec.FromEnv() |> Git.dirsFromDiff
+                Experiment.run "last-success-sha" "DBT_EXPERIMENT_LAST_SUCCESS_SHA"
+                    <| fun () -> 
+                        let lastSuccessfullyBuiltSha = LastSuccessSha.getLastSuccessCommitHash ()
+                        printfn $"TEST ONLY: {lastSuccessfullyBuiltSha}"
+
+                Env.get<GitDiffEnv> () |> Git.dirsFromDiff
             | All -> Git.allDirs ()
 
         selectors |> Seq.collect (findRequiredProjects dirs) |> Seq.toList
