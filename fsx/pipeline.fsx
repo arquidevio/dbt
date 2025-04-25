@@ -83,7 +83,7 @@ module Pipeline =
                         let lastSuccessfullyBuiltSha = LastSuccessSha.getLastSuccessCommitHash ()
                         printfn $"TEST ONLY: {lastSuccessfullyBuiltSha}"
 
-                Env.get<GitDiffEnv> () |> Git.dirsFromDiff
-            | All -> Git.allDirs ()
+                Env.get<GitDiffEnv> () |> GitDiff.dirsFromDiff
+            | All -> GitDiff.allDirs ()
 
         selectors |> Seq.collect (findRequiredProjects dirs) |> Seq.toList
