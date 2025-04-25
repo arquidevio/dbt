@@ -1,6 +1,5 @@
 #r "paket:
   nuget Fake.Tools.Git ~> 6.0
-  nuget Semver ~> 3.0
 "
 
 #load "../regex.fsx"
@@ -10,22 +9,13 @@ namespace Arquidev.Dbt
 open Regex
 open Fake.Core
 open Fake.Tools
-open Semver
-open System.IO
 
-[<RequireQualifiedAccess>]
 module Git =
 
     type GitRef =
         { Hash: string
           Name: string
           IsCommit: bool }
-
-    type TagInfo =
-        { CommitShortHash: string
-          CommitMessage: string
-          CommitDate: string
-          SemVer: SemVersion }
 
     type RepoHasNoTags = exn
 
@@ -126,52 +116,8 @@ module Git =
             | ParseRegex "git@(.*):(.*).git" [ uri; path ] -> sprintf "https://%s/%s" uri path
             | _ -> failwithf "Not an SSH repo URL: %s" url.Head
 
-    let getLastSemVerTag repoUrl =
-        let output =
-            Git.CommandHelper.getGitResult "." (sprintf "ls-remote --refs --tags %s" repoUrl)
-
-        let tag =
-            match output with
-            | [] -> raise (RepoHasNoTags repoUrl)
-            | ls ->
-                ls
-                |> Seq.choose (function
-                    | ParseRegex ".*\/([^\/]+)$" [ tag ] -> Some(SemVersion.Parse(tag, SemVersionStyles.Strict))
-                    | _ -> None)
-                |> Seq.sortWith _.CompareSortOrderTo
-                |> Seq.last
-
-        tag.ToString()
-
-    let getRecentTags repoUrl =
-
-        let repoPath = "/tmp/" + Path.GetTempFileName()
-
-        try
-            Directory.CreateDirectory repoPath |> ignore
-
-            Git.CommandHelper.gitCommandf repoPath "init -q"
-            let repo = Repo(repoPath)
-            repo.AddRemote repoUrl
-            repo.FetchTags()
-
-            let cmd =
-                "log -n 5 --no-walk --tags --decorate-refs=tags --pretty=\"%h,\t%D,\t%s,\t%cd\""
-
-            let lines = Git.CommandHelper.getGitResult repoPath cmd
-
-            let parseLog =
-                function
-                | ParseRegex "^([a-z0-9]{7}),\ttag: (.*),\t(.*),\t(.*)$" [ shortHash; tag; subject; date ] ->
-                    Some
-                        { SemVer = SemVersion.Parse(tag.Split(",").[0], SemVersionStyles.Any)
-                          CommitShortHash = shortHash
-                          CommitMessage = subject
-                          CommitDate = date }
-                | _ -> None
-
-            match lines with
-            | [] -> raise (RepoHasNoTags repoUrl)
-            | ls -> ls |> Seq.choose parseLog
-        finally
-            Directory.Delete(repoPath, true)
+        member _.ParseCommitMessage (commitHash: string) (regexp: string) =
+            Git.CommandHelper.getGitResult repoDir $"--no-pager log -1 --pretty=%%B %s{commitHash}"
+            |> Seq.tryPick (function
+                | ParseRegex regexp [ value ] -> Some value
+                | _ -> None)

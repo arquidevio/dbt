@@ -14,7 +14,7 @@ type GitDiffEnv =
       DBT_MAYBE_TAG: string option }
 
 [<RequireQualifiedAccess>]
-module Git =
+module GitDiff =
 
     let pwd = Directory.GetCurrentDirectory()
     let git = CommandHelper.runSimpleGitCommand
