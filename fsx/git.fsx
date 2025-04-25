@@ -22,7 +22,7 @@ module Git =
     let allDirs () : string seq =
         FileStatus.getAllFiles pwd
         |> Seq.map (snd >> FileInfo >> (fun f -> Path.GetRelativePath(pwd, f.Directory.FullName)))
-        |> Seq.filter ((<>) ".")
+        // -- make this configurable -- |> Seq.filter ((<>) ".")
 
     let dirsFromDiff (spec: GitDiffEnv) : string seq =
 
@@ -53,7 +53,7 @@ module Git =
                     yield!
                         FileStatus.getChangedFiles pwd currentCommit baseRef
                         |> Seq.map (snd >> FileInfo >> (fun f -> Path.GetRelativePath(pwd, f.Directory.FullName)))
-                        |> Seq.filter ((<>) ".")
+                        // -- make this configurable -- |> Seq.filter ((<>) ".")
             }
             |> Seq.distinct
 
