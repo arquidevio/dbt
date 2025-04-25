@@ -9,4 +9,4 @@
 
 open Arquidev.Dbt
 
-Git.dirsFromDiff (Env.get<GitDiffEnv> ())
+GitDiff.dirsFromDiff (Env.get<GitDiffEnv> ())
