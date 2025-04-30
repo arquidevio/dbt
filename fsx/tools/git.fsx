@@ -104,9 +104,9 @@ module Git =
             Git.CommandHelper.getGitResult repoDir (sprintf "--no-pager diff --name-only --exit-code %s %s" refA refB)
 
         member _.DiffLocalFiles pathA pathB =
-            (Git.CommandHelper.getGitResult
+            Git.CommandHelper.getGitResult
                 repoDir
-                (sprintf "--no-pager diff --color --no-index --exit-code -- %s %s" pathA pathB))
+                (sprintf "--no-pager diff --color --no-index --exit-code -- %s %s" pathA pathB)
             |> Seq.iter (printfn "%s")
 
         member _.HttpsUrl() =
@@ -116,8 +116,10 @@ module Git =
             | ParseRegex "git@(.*):(.*).git" [ uri; path ] -> sprintf "https://%s/%s" uri path
             | _ -> failwithf "Not an SSH repo URL: %s" url.Head
 
-        member _.ParseCommitMessage (commitHash: string) (regexp: string) =
-            Git.CommandHelper.getGitResult repoDir $"--no-pager log -1 --pretty=%%B %s{commitHash}"
-            |> Seq.tryPick (function
+        member _.ParseCommitMessage (startCommit: string) (endCommit: string) (regexp: string) =
+            Git.CommandHelper.getGitResult
+                repoDir
+                $"--no-pager log --boundary --pretty=%%B %s{startCommit}...%s{endCommit}"
+            |> Seq.choose (function
                 | ParseRegex regexp [ value ] -> Some value
                 | _ -> None)

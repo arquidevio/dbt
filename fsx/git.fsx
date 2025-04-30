@@ -21,7 +21,7 @@ module GitDiff =
 
     let allDirs () : string seq =
         FileStatus.getAllFiles pwd
-        |> Seq.map (snd >> FileInfo >> (fun f -> Path.GetRelativePath(pwd, f.Directory.FullName)))
+        |> Seq.map (snd >> FileInfo >> fun f -> Path.GetRelativePath(pwd, f.Directory.FullName))
         |> Seq.filter ((<>) ".")
 
     let dirsFromDiff (spec: GitDiffEnv) : string seq =
