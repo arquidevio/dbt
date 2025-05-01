@@ -36,7 +36,12 @@ module LastSuccessSha =
                     |> Seq.forall (fun j ->
                         match j.steps with
                         | [] -> false
-                        | steps -> steps |> Seq.forall (fun s -> s.conclusion = Some "success"))
+                        | steps ->
+                            steps
+                            |> Seq.forall (function
+                                | { conclusion = Some "success" }
+                                | { conclusion = Some "skipped" } -> true
+                                | _ -> false))
 
             )
             |> Option.map (fun r -> HeadSha r.head_sha)
@@ -79,7 +84,7 @@ module LastSuccessSha =
             |> _.jobs
 
         try
-            Fsi.enableDebugLogs()
+            Fsi.enableDebugLogs ()
             logic workflowRuns workflowRunJobs
         finally
-            Fsi.disableDebugLogs()
+            Fsi.disableDebugLogs ()
