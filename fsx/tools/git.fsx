@@ -50,7 +50,7 @@ module Git =
                 trailers
                 |> Option.map (fun trailers ->
                     trailers
-                    |> List.map (fun (k, v) -> $"--trailer \"%s{k}=%s{v}\"")
+                    |> List.map (fun (k, v) -> $"--trailer \"%s{k}:%s{v}\"")
                     |> String.concat " ")
                 |> Option.defaultValue ""
 
@@ -71,14 +71,14 @@ module Git =
         member _.ShowRefTags() =
             Git.CommandHelper.getGitResult repoDir "show-ref --tags -d"
             |> Seq.map (fun x ->
-                let chunks = x.Split(" ")
+                let chunks = x.Split " "
 
                 { Hash = chunks.[0]
                   Name =
                     match chunks.[1] with
                     | ParseRegex "refs/tags/([^^{}]*)(^{})?" [ x; _ ] -> x
                     | _ -> failwithf "Invalid ref %s" chunks.[1]
-                  IsCommit = chunks.[1].EndsWith("^{}") })
+                  IsCommit = chunks.[1].EndsWith "^{}" })
 
         member _.Pull() =
             Git.CommandHelper.gitCommand repoDir "pull"
