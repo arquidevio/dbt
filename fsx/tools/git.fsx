@@ -144,4 +144,4 @@ module Git =
             |> Seq.map (fun (key, pairs) ->
                 let values = pairs |> Seq.map snd
                 key, values)
-            |> dict
+            |> Map.ofSeq
