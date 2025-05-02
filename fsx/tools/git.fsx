@@ -37,13 +37,25 @@ module Git =
         member _.CheckoutNew source branch =
             Git.Branches.checkoutNewBranch repoDir source branch
 
-        member _.Commit (author: string option) (messages: string list) =
-            let msgString = messages |> List.map (sprintf "-m \"%s\"") |> String.concat " "
+        member _.Commit(message: string, ?author: string, ?trailers: (string * string) list) =
 
-            let authorFlag =
-                author |> Option.map (sprintf "--author \"%s\"") |> Option.defaultValue ""
+            let authorStr =
+                author
+                |> Option.map (fun author -> $"--author \"%s{author}\"")
+                |> Option.defaultValue ""
 
-            $"""commit {authorFlag} {msgString}"""
+            let messageStr = $"--message \"%s{message}\""
+
+            let trailersStr =
+                trailers
+                |> Option.map (fun trailers ->
+                    trailers
+                    |> List.map (fun (k, v) -> $"--trailer \"%s{k}:%s{v}\"")
+                    |> String.concat " ")
+                |> Option.defaultValue ""
+
+
+            $"commit {authorStr} {messageStr} {trailersStr}"
             |> Git.CommandHelper.runSimpleGitCommand repoDir
             |> Trace.trace
 
@@ -59,14 +71,14 @@ module Git =
         member _.ShowRefTags() =
             Git.CommandHelper.getGitResult repoDir "show-ref --tags -d"
             |> Seq.map (fun x ->
-                let chunks = x.Split(" ")
+                let chunks = x.Split " "
 
                 { Hash = chunks.[0]
                   Name =
                     match chunks.[1] with
                     | ParseRegex "refs/tags/([^^{}]*)(^{})?" [ x; _ ] -> x
                     | _ -> failwithf "Invalid ref %s" chunks.[1]
-                  IsCommit = chunks.[1].EndsWith("^{}") })
+                  IsCommit = chunks.[1].EndsWith "^{}" })
 
         member _.Pull() =
             Git.CommandHelper.gitCommand repoDir "pull"
