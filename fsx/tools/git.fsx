@@ -131,7 +131,8 @@ module Git =
         member _.ParseCommitMessage (startCommit: string) (endCommit: string) (regexp: string) =
             Git.CommandHelper.getGitResult
                 repoDir
-                $"--no-pager log --boundary --pretty=%%B %s{startCommit}...%s{endCommit}"
+                $"--no-pager log --pretty=%%B %s{startCommit}..%s{endCommit}"
             |> Seq.choose (function
                 | ParseRegex regexp [ value ] -> Some value
                 | _ -> None)
+            |> Seq.distinct
