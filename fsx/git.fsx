@@ -13,6 +13,14 @@ type GitDiffEnv =
       DBT_BASE_COMMIT: string option
       DBT_MAYBE_TAG: string option }
 
+type DiffResult =
+    { effectiveRange: EffectiveDiffRange
+      dirs: string seq }
+
+and EffectiveDiffRange =
+    { baseCommits: string list
+      currentCommit: string }
+
 [<RequireQualifiedAccess>]
 module GitDiff =
 
@@ -24,7 +32,7 @@ module GitDiff =
         |> Seq.map (snd >> FileInfo >> (fun f -> Path.GetRelativePath(pwd, f.Directory.FullName)))
         |> Seq.filter ((<>) ".")
 
-    let dirsFromDiff (spec: GitDiffEnv) : string seq =
+    let dirsFromDiff (spec: GitDiffEnv) : DiffResult =
 
         let currentCommit = spec.DBT_CURRENT_COMMIT |> Option.defaultValue "HEAD"
         let baseCommit = spec.DBT_BASE_COMMIT
@@ -66,10 +74,16 @@ module GitDiff =
         Trace.tracefn $"%s{info}"
         dirs |> Seq.iter (Trace.logfn "%s")
 
-        dirs
-        |> Seq.filter (fun p ->
-            if Directory.Exists p then
-                true
-            else
-                Trace.traceImportantfn $"WARNING: path '%s{p}' no longer exists in the repository. Ignoring."
-                false)
+        let dirs =
+            dirs
+            |> Seq.filter (fun p ->
+                if Directory.Exists p then
+                    true
+                else
+                    Trace.traceImportantfn $"WARNING: path '%s{p}' no longer exists in the repository. Ignoring."
+                    false)
+
+        { dirs = dirs
+          effectiveRange =
+            { baseCommits = baseRefs
+              currentCommit = currentCommit } }

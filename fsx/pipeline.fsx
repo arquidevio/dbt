@@ -18,6 +18,15 @@ type PipelineEnv =
     { [<Default(nameof (Diff))>]
       DBT_MODE: Mode }
 
+type PipelineOutput =
+    { requiredProjects: ProjectPath list
+      changeSetRange: ChangeSetRange option }
+
+and ChangeSetRange =
+    { baseCommits: string list
+      currentCommit: string }
+
+
 [<RequireQualifiedAccess>]
 module Pipeline =
     open System.IO
@@ -70,11 +79,11 @@ module Pipeline =
               dir = FileInfo(p).DirectoryName
               safeName = config.safeName p })
 
-    let run (selectors: Selector list) =
+    let run (selectors: Selector list) : PipelineOutput =
         let env = Env.get<PipelineEnv> ()
         Trace.tracefn $"Mode: %s{env.DBT_MODE.ToString().ToLower()}"
 
-        let dirs =
+        let dirs, diffRange =
             match env.DBT_MODE with
             | Diff ->
                 Trace.traceHeader "GIT CHANGE SET"
@@ -95,12 +104,17 @@ module Pipeline =
                     let env = Env.get<GitDiffEnv> ()
 
                     match baseCommit with
-                    | Some commit ->
-                        { env with
-                            DBT_BASE_COMMIT = Some commit }
                     | None -> env
+                    | commit -> { env with DBT_BASE_COMMIT = commit }
 
-                diffEnv |> GitDiff.dirsFromDiff
-            | All -> GitDiff.allDirs ()
 
-        selectors |> Seq.collect (findRequiredProjects dirs) |> Seq.toList
+                let result = diffEnv |> GitDiff.dirsFromDiff
+
+                result.dirs,
+                Some
+                    { baseCommits = result.effectiveRange.baseCommits
+                      currentCommit = result.effectiveRange.currentCommit }
+            | All -> GitDiff.allDirs (), None
+
+        { requiredProjects = selectors |> Seq.collect (findRequiredProjects dirs) |> Seq.toList
+          changeSetRange = diffRange }
