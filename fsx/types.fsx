@@ -49,7 +49,7 @@ type UpdateSpec =
     { environment: string
       new_tag: string
       version: int64
-      change_keys: string list
+      change_keys: string list option
       images: ImageSpec list }
 
 and ImageSpec = { name: string; digest: string option }
