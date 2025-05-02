@@ -7,7 +7,7 @@ open System
 
 [<RequireQualifiedAccess>]
 module Experiment =
-    let run (name: string) (enabledEnvVarName: string) (experimentFunc: unit -> unit) =
+    let run (name: string) (enabledEnvVarName: string) (experimentFunc: unit -> 'a) : 'a option =
 
         let isEnabled =
             [ "1"; "true"; "TRUE"; "YES"; "Y" ]
@@ -17,10 +17,13 @@ module Experiment =
             try
                 if isEnabled then
                     Trace.traceHeader $"EXPERIMENT: {name}"
-                    experimentFunc ()
+                    experimentFunc () |> Some
+                else
+                    None
             with exn ->
                 Trace.traceError "WARN: experiment failed"
                 Trace.traceException exn
+                None
         finally
             if isEnabled then
                 Trace.traceHeader $"EXPERIMENT END"

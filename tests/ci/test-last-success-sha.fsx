@@ -48,7 +48,7 @@ let tests =
                       (fun id ->
                           match id with
                           | 1L -> [ { steps = [ { conclusion = Some "success" } ] } ]
-                          | 2L -> [ { steps = [ { conclusion = Some "success" }; { conclusion = Some "skipped" }] } ]
+                          | 2L -> [ { steps = [ { conclusion = Some "success" }; { conclusion = Some "skipped" } ] } ]
                           | 3L -> [ { steps = [] } ]
                           | 4L -> [ { steps = [ { conclusion = Some "failure" }; { conclusion = Some "success" } ] } ]
                           | _ -> []))
