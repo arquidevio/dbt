@@ -78,12 +78,29 @@ module Pipeline =
             match env.DBT_MODE with
             | Diff ->
                 Trace.traceHeader "GIT CHANGE SET"
-                Experiment.run "last-success-sha" "DBT_EXPERIMENT_LAST_SUCCESS_SHA"
-                    <| fun () -> 
-                        let lastSuccessfullyBuiltSha = LastSuccessSha.getLastSuccessCommitHash ()
-                        printfn $"TEST ONLY: {lastSuccessfullyBuiltSha}"
 
-                Env.get<GitDiffEnv> () |> GitDiff.dirsFromDiff
+                let baseCommit =
+                    Experiment.run "last-success-sha" "DBT_EXPERIMENT_LAST_SUCCESS_SHA"
+                    <| fun () ->
+                        let result = LastSuccessSha.getLastSuccessCommitHash ()
+                        printfn $"Last success sha: %A{result}"
+
+                        match result with
+                        | HeadSha commit -> Some commit
+                        | NoneSuccessful -> None
+                        | NoneFound -> None
+                    |> Option.flatten
+
+                let diffEnv =
+                    let env = Env.get<GitDiffEnv> ()
+
+                    match baseCommit with
+                    | Some commit ->
+                        { env with
+                            DBT_BASE_COMMIT = Some commit }
+                    | None -> env
+
+                diffEnv |> GitDiff.dirsFromDiff
             | All -> GitDiff.allDirs ()
 
         selectors |> Seq.collect (findRequiredProjects dirs) |> Seq.toList
