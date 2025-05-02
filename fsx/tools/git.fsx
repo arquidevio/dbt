@@ -129,10 +129,19 @@ module Git =
             | _ -> failwithf "Not an SSH repo URL: %s" url.Head
 
         member _.ParseCommitMessage (startCommit: string) (endCommit: string) (regexp: string) =
-            Git.CommandHelper.getGitResult
-                repoDir
-                $"--no-pager log --pretty=%%B %s{startCommit}..%s{endCommit}"
+            Git.CommandHelper.getGitResult repoDir $"--no-pager log --pretty=%%B %s{startCommit}..%s{endCommit}"
             |> Seq.choose (function
                 | ParseRegex regexp [ value ] -> Some value
                 | _ -> None)
             |> Seq.distinct
+
+        member _.ParseTrailers(commitHash: string) =
+            Git.CommandHelper.getGitResult repoDir $"""--no-pager log -1 {commitHash} --format="%%(trailers)" """
+            |> Seq.where ((<>) "")
+            |> Seq.map _.Split(':', 2, System.StringSplitOptions.TrimEntries)
+            |> Seq.map (fun items -> items[0], items[1])
+            |> Seq.groupBy fst
+            |> Seq.map (fun (key, pairs) ->
+                let values = pairs |> Seq.map snd
+                key, values)
+            |> dict
