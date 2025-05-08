@@ -1,5 +1,6 @@
 extra_repos: 
 - git@github.com:arquidevio/test-dbt
 image: ghcr.io/queil/image:dotnet-8
-caches: ~/.nuget
+caches: 
+- ~/.nuget
 
