@@ -5,9 +5,7 @@ namespace Arquidev.Dbt
 #load "env.fsx"
 #load "git-v2.fsx"
 #load "ci/github/last-success-sha.fsx"
-#load "experiment.fsx"
 #load "dotnet/project.fsx"
-
 
 open Arquidev.Dbt
 
@@ -31,6 +29,33 @@ type DbtEnv =
       DBT_PROFILE: string
       DBT_CURRENT_COMMIT: string option
       DBT_BASE_COMMIT: string option }
+
+
+
+type Plan =
+    { profiles: Map<string, Profile> option
+      range: Range option }
+
+    static member Default = { profiles = None; range = None }
+
+and Range =
+    { fromRef: string option
+      toRef: string option }
+
+    static member Default = { fromRef = None; toRef = None }
+
+and Profile =
+    { id: string
+      selectors: Selector list }
+
+    //  output: Output }
+
+    static member Default =
+        { id = "default"
+          //     output = fun _ -> ()
+          selectors = [] }
+
+//and Output = ProjectPath -> obj
 
 [<RequireQualifiedAccess>]
 module Pipeline =
@@ -85,52 +110,19 @@ module Pipeline =
               safeName = config.safeName p })
 
 [<AutoOpen>]
-module Plan =
+module rec PlanBuilder =
 
-    type Plan =
-        { profiles: Map<string, Profile> option
-          range: Range option }
-
-        static member Default = { profiles = None; range = None }
-
-    and Range =
-        { fromRef: string option
-          toRef: string option }
-
-        static member Default = { fromRef = None; toRef = None }
-
-    and Profile =
-        { id: string
-          selectors: Selector list }
-
-        //  output: Output }
-
-        static member Default =
-            { id = "default"
-              //     output = fun _ -> ()
-              selectors = [] }
-
-    //and Output = ProjectPath -> obj
 
     [<NoComparison; NoEquality>]
     type ProfileBuilder(id: string) =
 
-        // [<CustomOperation("output")>]
-        // member inline _.Output<'a>(p: Profile, [<InlineIfLambdaAttribute>] output: ProjectPath -> 'a) =
-        //     { p with
-        //         output = fun p -> box<'a> (output p) }
-
         member this.Yield _ : Profile = { Profile.Default with id = id }
         member inline _.Run p : Profile = p
-
 
         [<CustomOperation("selector")>]
         member inline _.Selector(p: Profile, selector: Selector) =
             { p with
                 selectors = selector :: p.selectors }
-
-
-
 
     [<NoComparison; NoEquality>]
     type RangeBuilder() =
@@ -142,8 +134,14 @@ module Plan =
         [<CustomOperation("from_ref")>]
         member inline _.FromRef(range: Range, fromRef: string option) = { range with fromRef = fromRef }
 
+        [<CustomOperation("from_ref")>]
+        member inline _.FromRef(range: Range, fromRef: string) = { range with fromRef = Some fromRef }
+
         [<CustomOperation("to_ref")>]
         member inline _.ToRef(range: Range, toRef: string option) = { range with toRef = toRef }
+
+        [<CustomOperation("to_ref")>]
+        member inline _.ToRef(range: Range, toRef: string) = { range with toRef = Some toRef }
 
         member inline _.Run p : Range = p
 
@@ -159,34 +157,28 @@ module Plan =
         member inline _.Yield(_: unit) = ()
         member inline _.Yield(x: Range) = PlanFacet.Range x
         member inline _.Yield(x: Profile) = PlanFacet.Profile x
-
         member inline _.Yield(x: Plan) = PlanFacet.Custom x
-
-        member inline _.Combine(x1: PlanFacet, x2: PlanFacet list) =
-
-            x1 :: x2
-
-
+        member inline _.Combine(x1: PlanFacet, x2: PlanFacet list) = x1 :: x2
         member inline _.Delay([<InlineIfLambda>] a: unit -> unit) = []
-        member inline _.Delay([<InlineIfLambda>] a: unit -> PlanFacet list) = a () // normal delay method for
-
+        member inline _.Delay([<InlineIfLambda>] a: unit -> PlanFacet list) = a ()
         member inline _.Delay([<InlineIfLambda>] a: unit -> PlanFacet) = [ a () ]
-        //member inline _.Run(state: PlanFacet) = [state]
+
         member inline _.Run(state: PlanFacet list) : Plan =
 
             let basePlan =
-                { range =
-                    state
-                    |> Seq.tryPick (function
-                        | Range r -> Some r
-                        | _ -> None)
-                  profiles =
-                    state
-                    |> Seq.choose (function
-                        | Profile p -> Some(p.id, p)
-                        | _ -> None)
-                    |> Map.ofSeq
-                    |> Some }
+                { Plan.Default with
+                    range =
+                        state
+                        |> Seq.tryPick (function
+                            | Range r -> Some r
+                            | _ -> None)
+                    profiles =
+                        state
+                        |> Seq.choose (function
+                            | Profile p -> Some(p.id, p)
+                            | _ -> None)
+                        |> Map.ofSeq
+                        |> Some }
 
             let customPlan =
                 state
@@ -194,47 +186,48 @@ module Plan =
                     | Custom p -> Some p
                     | _ -> None)
 
-            match customPlan with
-            | Some c ->
-                { basePlan with
-                    range = c.range |> Option.orElse basePlan.range
-                    profiles = c.profiles }
-            | None -> basePlan
+
+            let plan =
+                match customPlan with
+                | Some c ->
+                    { basePlan with
+                        range = c.range |> Option.orElse basePlan.range
+                        profiles = c.profiles }
+                | None -> basePlan
+
+            plan
+
+ 
 
     let plan = PlanBuilder()
     let inline profile id = ProfileBuilder id
     let range = RangeBuilder()
 
-
-
-
-    [<RequireQualifiedAccess>]
     module Plan =
 
         let env =
             Lazy<DbtEnv>(fun () ->
                 let env: DbtEnv = Env.get<DbtEnv> ()
-
+                printfn "%A" env
                 { env with
                     DBT_BASE_COMMIT =
                         env.DBT_BASE_COMMIT
                         |> Option.orElseWith (fun () -> LastSuccessSha.getLastSuccessCommitHash () |> _.toOption) })
 
-        let define (custom: Plan) =
+        let evaluate (plan: Plan) : PipelineOutput =
+
             let env = env.Value
 
-            plan {
-                range {
-                    from_ref env.DBT_BASE_COMMIT
-                    to_ref env.DBT_CURRENT_COMMIT
+            let plan =
+                PlanBuilder.plan {
+                    range {
+                        from_ref env.DBT_BASE_COMMIT
+                        to_ref env.DBT_CURRENT_COMMIT
+                    }
+
+                    plan
                 }
 
-                custom
-            }
-
-        let create (plan: Plan) : PipelineOutput =
-
-            let env = env.Value
             Log.trace "DBT Build Plan"
             Log.trace $"Mode: %s{env.DBT_MODE.ToString().ToLower()}"
             Log.trace $"Target: %s{env.DBT_PROFILE}"
