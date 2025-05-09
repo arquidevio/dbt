@@ -215,7 +215,8 @@ module rec PlanBuilder =
                         |> Option.orElseWith (fun () -> LastSuccessSha.getLastSuccessCommitHash () |> _.toOption) })
 
         let evaluate (plan: Plan) : PipelineOutput =
-
+            
+            Log.trace "DBT Build Plan"
             let env = env.Value
 
             let plan =
@@ -228,7 +229,6 @@ module rec PlanBuilder =
                     plan
                 }
 
-            Log.trace "DBT Build Plan"
             Log.trace $"Mode: %s{env.DBT_MODE.ToString().ToLower()}"
             Log.trace $"Target: %s{env.DBT_PROFILE}"
 
