@@ -15,6 +15,15 @@ type WorkflowRunDiscovery =
     | HeadSha of string
     | NoneSuccessful
     | NoneFound
+    | Skipped
+
+    member x.toOption =
+        match x with
+        | HeadSha commit -> Some commit
+        | NoneSuccessful -> None
+        | NoneFound -> None
+        | Skipped -> None
+
 
 [<RequireQualifiedAccess>]
 module LastSuccessSha =
@@ -49,42 +58,50 @@ module LastSuccessSha =
 
     let getLastSuccessCommitHash () =
 
-        let env =
-            Env.get<
-                {| GITHUB_REPOSITORY: string
-                   GITHUB_TOKEN: string
-                   GITHUB_REF_NAME: string
-                   GITHUB_WORKFLOW_REF: string |}
-             > ()
+        let context = Env.get<{| GITHUB_ACTIONS: bool option |}> ()
 
-        let gh =
-            http {
-                Authorization $"token {env.GITHUB_TOKEN}"
-                Accept "application/vnd.github+json"
-                UserAgent "FsHttp"
-            }
+        if context.GITHUB_ACTIONS |> Option.defaultValue false |> not then
+            Skipped
+        else
 
-        let workflowRuns () =
-            let workflowId =
-                env.GITHUB_WORKFLOW_REF.Split "@" |> Seq.head |> _.Split("/") |> Seq.last
+            let env =
+                Env.get<
+                    {| GITHUB_REPOSITORY: string
+                       GITHUB_TOKEN: string
+                       GITHUB_REF_NAME: string
+                       GITHUB_WORKFLOW_REF: string |}
+                 > ()
 
-            gh {
-                GET
-                    $"""https://api.github.com/repos/{env.GITHUB_REPOSITORY}/actions/workflows/{workflowId}/runs?status=success&branch={env.GITHUB_REF_NAME}&page=1&per_page=10"""
-            }
-            |> Request.send
-            |> Response.assertOk
-            |> Response.deserializeJson<{| workflow_runs: WorkflowRun list |}>
-            |> _.workflow_runs
+            let gh =
+                http {
+                    Authorization $"token {env.GITHUB_TOKEN}"
+                    Accept "application/vnd.github+json"
+                    UserAgent "FsHttp"
+                }
 
-        let workflowRunJobs (runId: int64) =
-            gh { GET $"https://api.github.com/repos/{env.GITHUB_REPOSITORY}/actions/runs/{runId}/jobs" }
-            |> Request.send
-            |> Response.deserializeJson<{| jobs: Job list |}>
-            |> _.jobs
+            let workflowRuns () =
+                let workflowId =
+                    env.GITHUB_WORKFLOW_REF.Split "@" |> Seq.head |> _.Split("/") |> Seq.last
 
-        try
-            Fsi.enableDebugLogs ()
-            logic workflowRuns workflowRunJobs
-        finally
-            Fsi.disableDebugLogs ()
+                gh {
+                    GET
+                        $"""https://api.github.com/repos/{env.GITHUB_REPOSITORY}/actions/workflows/{workflowId}/runs?status=success&branch={env.GITHUB_REF_NAME}&page=1&per_page=10"""
+                }
+                |> Request.send
+                |> Response.assertOk
+                |> Response.deserializeJson<{| workflow_runs: WorkflowRun list |}>
+                |> _.workflow_runs
+
+            let workflowRunJobs (runId: int64) =
+                gh { GET $"https://api.github.com/repos/{env.GITHUB_REPOSITORY}/actions/runs/{runId}/jobs" }
+                |> Request.send
+                |> Response.deserializeJson<{| jobs: Job list |}>
+                |> _.jobs
+
+            try
+                Fsi.enableDebugLogs ()
+                let result = logic workflowRuns workflowRunJobs
+                printfn $"Last success sha: %A{result}"
+                result
+            finally
+                Fsi.disableDebugLogs ()

@@ -57,3 +57,9 @@ module DotnetProject =
                 fun selector path ->
                     let projs = Solution.makeDependencyTree slnPath
                     path |> Solution.findLeafDependants projs selector.isRequired }
+
+    let AllPublishable = Selector
+
+    let AllPackable slnPath =
+        { Selector slnPath with
+            isRequired = isPackable }
