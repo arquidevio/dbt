@@ -208,7 +208,7 @@ module rec PlanBuilder =
         let env =
             Lazy<DbtEnv>(fun () ->
                 let env: DbtEnv = Env.get<DbtEnv> ()
-                printfn "%A" env
+
                 { env with
                     DBT_BASE_COMMIT =
                         env.DBT_BASE_COMMIT
