@@ -20,10 +20,12 @@ module Log =
 
         let private env = Lazy<LogEnv>(fun () -> Env.get<LogEnv> ())
 
+        let level () = env.Value.DBT_LOG_LEVEL
+
         let output<'a> level fmt =
             Printf.kprintf<unit, 'a>
                 (fun str ->
-                    if env.Value.DBT_LOG_LEVEL >= level then
+                    if level >= env.Value.DBT_LOG_LEVEL then
                         printfn "%s" str)
                 fmt
 

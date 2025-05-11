@@ -192,9 +192,7 @@ module rec PlanBuilder =
         let evaluate (plan: Plan) : PipelineOutput =
 
             Log.info "DBT Build Plan"
-
-            Log.debug "%A" plan
-
+        
             let env = env.Value
 
             let plan =
@@ -207,6 +205,7 @@ module rec PlanBuilder =
                     plan
                 }
 
+            Log.debug "%A" plan
             Log.info $"Mode: %s{env.DBT_MODE.ToString().ToLower()}"
             Log.info $"Profile: %s{env.DBT_PROFILE}"
 
