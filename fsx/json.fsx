@@ -8,10 +8,7 @@ module Json =
     open System.Text.Json.Serialization
 
     let private DefaultOptions =
-        JsonFSharpOptions
-            .Default()
-            .WithSkippableOptionFields()
-            .ToJsonSerializerOptions()
+        JsonFSharpOptions.Default().WithSkippableOptionFields().ToJsonSerializerOptions()
 
     let write (value: 'a) : string =
         JsonSerializer.Serialize(value, DefaultOptions)

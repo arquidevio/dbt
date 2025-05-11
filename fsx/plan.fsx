@@ -1,36 +1,13 @@
 namespace Arquidev.Dbt
 
 #load "types.fsx"
-#load "log.fsx"
 #load "env.fsx"
+#load "log.fsx"
 #load "git-v2.fsx"
 #load "ci/github/last-success-sha.fsx"
-#load "dotnet/project.fsx"
+#load "ce.fsx"
 
 open Arquidev.Dbt
-
-
-type Mode =
-    | All
-    | Diff
-
-type PipelineOutput =
-    { requiredProjects: ProjectPath list
-      changeSetRange: ChangeSetRange option }
-
-and ChangeSetRange =
-    { baseCommits: string list
-      currentCommit: string }
-
-type DbtEnv =
-    { [<Default("diff")>]
-      DBT_MODE: Mode
-      [<Default("default")>]
-      DBT_PROFILE: string
-      DBT_CURRENT_COMMIT: string option
-      DBT_BASE_COMMIT: string option }
-
-
 
 type Plan =
     { profiles: Map<string, Profile> option
@@ -48,14 +25,7 @@ and Profile =
     { id: string
       selectors: Selector list }
 
-    //  output: Output }
-
-    static member Default =
-        { id = "default"
-          //     output = fun _ -> ()
-          selectors = [] }
-
-//and Output = ProjectPath -> obj
+    static member Default = { id = "default"; selectors = [] }
 
 [<RequireQualifiedAccess>]
 module Pipeline =
@@ -112,12 +82,17 @@ module Pipeline =
 [<AutoOpen>]
 module rec PlanBuilder =
 
+    type PlanFacet =
+        | Profile of Profile
+        | Range of Range
+        | Custom of Plan
+        | RootDir of string
 
     [<NoComparison; NoEquality>]
     type ProfileBuilder(id: string) =
 
-        member this.Yield _ : Profile = { Profile.Default with id = id }
-        member inline _.Run p : Profile = p
+        member _.Yield(_: unit) : Profile = { Profile.Default with id = id }
+        member inline _.Run(p: Profile) = Profile p
 
         [<CustomOperation("selector")>]
         member inline _.Selector(p: Profile, selector: Selector) =
@@ -126,10 +101,8 @@ module rec PlanBuilder =
 
     [<NoComparison; NoEquality>]
     type RangeBuilder() =
-
-
-        member this.Yield _ : Range = Range.Default
-        member _.Zero() = Range.Default
+        member inline _.Yield(_: unit) = Range.Default
+        member inline _.Run p = Range p
 
         [<CustomOperation("from_ref")>]
         member inline _.FromRef(range: Range, fromRef: string option) = { range with fromRef = fromRef }
@@ -143,28 +116,12 @@ module rec PlanBuilder =
         [<CustomOperation("to_ref")>]
         member inline _.ToRef(range: Range, toRef: string) = { range with toRef = Some toRef }
 
-        member inline _.Run p : Range = p
 
+    type Ce.CoreBuilder with
+        member _.Delay(f: unit -> Plan list) = f () |> List.map Custom
+        member _.Yield(state: Plan list) = state |> List.map Custom
 
-    type PlanFacet =
-        | Profile of Profile
-        | Range of Range
-        | Custom of Plan
-
-    type PlanBuilder() =
-
-        member inline _.Zero() = ()
-        member inline _.Yield(_: unit) = ()
-        member inline _.Yield(x: Range) = PlanFacet.Range x
-        member inline _.Yield(x: Profile) = PlanFacet.Profile x
-        member inline _.Yield(x: Plan) = PlanFacet.Custom x
-        member inline _.Combine(x1: PlanFacet, x2: PlanFacet list) = x1 :: x2
-        member inline _.Delay([<InlineIfLambda>] a: unit -> unit) = []
-        member inline _.Delay([<InlineIfLambda>] a: unit -> PlanFacet list) = a ()
-        member inline _.Delay([<InlineIfLambda>] a: unit -> PlanFacet) = [ a () ]
-
-        member inline _.Run(state: PlanFacet list) : Plan =
-
+        member _.Run state =
             let basePlan =
                 { Plan.Default with
                     range =
@@ -186,7 +143,6 @@ module rec PlanBuilder =
                     | Custom p -> Some p
                     | _ -> None)
 
-
             let plan =
                 match customPlan with
                 | Some c ->
@@ -197,12 +153,31 @@ module rec PlanBuilder =
 
             plan
 
- 
-
-    let plan = PlanBuilder()
-    let inline profile id = ProfileBuilder id
+    let plan = Ce.CoreBuilder()
+    let profile id = ProfileBuilder id
     let range = RangeBuilder()
 
+    type Mode =
+        | All
+        | Diff
+
+    type PipelineOutput =
+        { requiredProjects: ProjectPath list
+          changeSetRange: ChangeSetRange option }
+
+    and ChangeSetRange =
+        { baseCommits: string list
+          currentCommit: string }
+
+    type DbtEnv =
+        { [<Default("diff")>]
+          DBT_MODE: Mode
+          [<Default("default")>]
+          DBT_PROFILE: string
+          DBT_CURRENT_COMMIT: string option
+          DBT_BASE_COMMIT: string option }
+
+    [<RequireQualifiedAccess>]
     module Plan =
 
         let env =
@@ -215,8 +190,11 @@ module rec PlanBuilder =
                         |> Option.orElseWith (fun () -> LastSuccessSha.getLastSuccessCommitHash () |> _.toOption) })
 
         let evaluate (plan: Plan) : PipelineOutput =
-            
-            Log.trace "DBT Build Plan"
+
+            Log.info "DBT Build Plan"
+
+            Log.debug "%A" plan
+
             let env = env.Value
 
             let plan =
@@ -229,8 +207,8 @@ module rec PlanBuilder =
                     plan
                 }
 
-            Log.trace $"Mode: %s{env.DBT_MODE.ToString().ToLower()}"
-            Log.trace $"Target: %s{env.DBT_PROFILE}"
+            Log.info $"Mode: %s{env.DBT_MODE.ToString().ToLower()}"
+            Log.info $"Profile: %s{env.DBT_PROFILE}"
 
             let mode = env.DBT_MODE
             let profile = env.DBT_PROFILE

@@ -3,7 +3,6 @@
 
 namespace Arquidev.Dbt
 
-open Fake.Core
 open Fake.Tools.Git
 open System.IO
 
@@ -23,25 +22,25 @@ module GitDiff =
 
     let allDirs () : string seq =
         FileStatus.getAllFiles pwd
-        |> Seq.map (snd >> FileInfo >> fun f -> Path.GetRelativePath(pwd, f.Directory.FullName))
+        |> Seq.map (snd >> FileInfo >> (fun f -> Path.GetRelativePath(pwd, f.Directory.FullName)))
         |> Seq.filter ((<>) ".")
 
-    let dirsFromDiff (fromRef:string option) (toRef:string option) : DiffResult =
+    let dirsFromDiff (fromRef: string option) (toRef: string option) : DiffResult =
 
         let currentCommit = toRef |> Option.defaultWith (fun () -> git pwd "rev-parse HEAD")
         let baseCommit = fromRef
 
-        Log.trace $"Current revision: %s{currentCommit}"
+        Log.info $"Current revision: %s{currentCommit}"
 
         let baseRefs =
             match baseCommit with
             | None
             | Some "0000000000000000000000000000000000000000" ->
-                Log.trace "Base revisions(s): "
+                Log.info "Base revisions(s): "
                 let output = git pwd $$"""show --no-patch --format="%P" {{currentCommit}}"""
                 output.Split ' ' |> Seq.toList
             | Some ref ->
-                Log.trace $"Base revision override: {ref}"
+                Log.info $"Base revision override: {ref}"
                 [ ref ]
 
         let dirs =
@@ -49,7 +48,7 @@ module GitDiff =
                 for baseRef in baseRefs do
                     yield!
                         FileStatus.getChangedFiles pwd currentCommit baseRef
-                        |> Seq.map (snd >> FileInfo >> fun f -> Path.GetRelativePath(pwd, f.Directory.FullName))
+                        |> Seq.map (snd >> FileInfo >> (fun f -> Path.GetRelativePath(pwd, f.Directory.FullName)))
                         |> Seq.filter ((<>) ".")
             }
             |> Seq.distinct
@@ -60,8 +59,8 @@ module GitDiff =
             else
                 "Detected git changes in: "
 
-        Log.trace $"%s{info}"
-        dirs |> Seq.iter (Trace.logfn "%s")
+        Log.info $"%s{info}"
+        dirs |> Seq.iter (Log.info "%s")
 
         let dirs =
             dirs

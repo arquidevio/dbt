@@ -1,15 +1,36 @@
 namespace Arquidev.Dbt
 
+#load "env.fsx"
+
 [<AutoOpen>]
 module Log =
 
+    [<RequireQualifiedAccess>]
     module Log =
-        type LogLevel = private | Error | Warn | Info | Debug | Trace
-        let debug = printfn
-        let trace = printfn
-        let error = printfn
-        let info = printfn
-        let warn  = printfn
+        [<RequireQualifiedAccess>]
+        type LogLevel =
+            | debug
+            | info
+            | warn
+            | error
+
+        type LogEnv =
+            { [<Default("info")>]
+              DBT_LOG_LEVEL: LogLevel }
+
+        let private env = Lazy<LogEnv>(fun () -> Env.get<LogEnv> ())
+
+        let output<'a> level fmt =
+            Printf.kprintf<unit, 'a>
+                (fun str ->
+                    if env.Value.DBT_LOG_LEVEL >= level then
+                        printfn "%s" str)
+                fmt
+
+        let debug<'a> = output<'a> LogLevel.debug
+        let info<'a> = output<'a> LogLevel.info
+        let warn<'a> = output<'a> LogLevel.warn
+        let error<'a> = output<'a> LogLevel.error
 
         let header message =
             let width = 80
@@ -17,7 +38,7 @@ module Log =
             let msgLength = String.length message
             let padSize = max 0 ((width - msgLength) / 2)
             let padding = String.replicate padSize " "
-            
+
             printfn "%s" line
-            printfn "%s%s" padding message  
+            printfn "%s%s" padding message
             printfn "%s" line
