@@ -284,10 +284,14 @@ module rec PlanBuilder =
                           currentCommit = result.effectiveRange.currentCommit }
                 | All -> GitDiff.allDirs (), None
 
-            { requiredProjects =
-                match plan.profiles with
-                | Some p when p |> Map.count > 0 && p.ContainsKey profile -> p[profile].selectors
-                | _ -> failwithf $"Profile {profile} not configured"
-                |> Seq.collect (Pipeline.findRequiredProjects dirs)
-                |> Seq.toList
-              changeSetRange = diffRange }
+            let result =
+                { requiredProjects =
+                    match plan.profiles with
+                    | Some p when p |> Map.count > 0 && p.ContainsKey profile -> p[profile].selectors
+                    | _ -> failwithf $"Profile {profile} not configured"
+                    |> Seq.collect (Pipeline.findRequiredProjects dirs)
+                    |> Seq.toList
+                  changeSetRange = diffRange }
+
+            Log.debug "%A" result
+            result
