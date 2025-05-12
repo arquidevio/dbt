@@ -43,13 +43,13 @@ module DotnetProject =
 
     let private config =
         { Selector.Default with
-            kind = "dotnet"
+            id = "dotnet"
             pattern = "*.*sproj"
             safeName = SafeName.toLowerKebabNoRoot
             isRequired = isPublishable
             isIgnored = isTest }
 
-    let isDotnet (p: ProjectPath) = p.kind = config.kind
+    let isDotnet (p: ProjectPath) = p.kind = config.id
 
     let Selector slnPath =
         { config with

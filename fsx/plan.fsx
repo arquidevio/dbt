@@ -39,8 +39,13 @@ module Pipeline =
         (originPath: string)
         : string option =
         let rec findParentProj (p: string) =
+
+            let patternFile = projectPattern |> Path.GetFileName
+            let patternDir = projectPattern |> Path.GetDirectoryName
+
             match
-                Directory.EnumerateFiles(p, projectPattern)
+                Directory.EnumerateFiles(p, patternFile)
+                |> Seq.filter _.StartsWith(patternDir)
                 |> Seq.filter (fun path ->
                     patternIgnores
                     |> Seq.exists (fun pattern -> Regex.IsMatch(path, pattern))
@@ -74,7 +79,7 @@ module Pipeline =
             paths
         |> Seq.filter config.isRequired
         |> Seq.map (fun p ->
-            { kind = config.kind
+            { kind = config.id
               path = p
               dir = FileInfo(p).DirectoryName
               safeName = config.safeName p })
@@ -88,16 +93,55 @@ module rec PlanBuilder =
         | Custom of Plan
         | RootDir of string
 
+    type ProfileFacet = Selector of Selector
+
+    [<NoComparison; NoEquality>]
+    type SelectorBuilder(id: string) =
+
+        member _.Yield(_: unit) : Selector = { Selector.Default with id = id }
+        member inline _.Run(s: Selector) = ProfileFacet.Selector s
+
+        [<CustomOperation("pattern")>]
+        member inline _.Pattern(selector: Selector, pattern: string, ?ignores: string list) =
+            { selector with pattern = pattern }
+
+        [<CustomOperation("exclude")>]
+        member inline _.exclude(selector: Selector, exclude: string) =
+            { selector with
+                patternIgnores = exclude :: selector.patternIgnores }
+
+        [<CustomOperation("required_when")>]
+        member inline _.RequiredWhen(selector: Selector, isRequired: string -> bool) =
+            { selector with
+                isRequired = isRequired }
+
+        [<CustomOperation("ignored_when")>]
+        member inline _.IgnoredWhen(selector: Selector, isIgnored: string -> bool) =
+            { selector with isIgnored = isIgnored }
+
+        [<CustomOperation("project_id")>]
+        member inline _.ProjectId(selector: Selector, projectId: string -> string) =
+            { selector with safeName = projectId }
+
+        [<CustomOperation("expand_leafs")>]
+        member inline _.ExpandLeafs(selector: Selector, expandLeafs: Selector -> string -> string seq) =
+            { selector with
+                expandLeafs = expandLeafs }
+
     [<NoComparison; NoEquality>]
     type ProfileBuilder(id: string) =
+        inherit Ce.CoreBuilder()
 
-        member _.Yield(_: unit) : Profile = { Profile.Default with id = id }
-        member inline _.Run(p: Profile) = Profile p
+        member _.Run state =
 
-        [<CustomOperation("selector")>]
-        member inline _.Selector(p: Profile, selector: Selector) =
-            { p with
-                selectors = selector :: p.selectors }
+            Profile
+                { Profile.Default with
+                    id = id
+                    selectors =
+                        state
+                        |> List.choose (function
+                            | Selector id -> Some id) }
+
 
     [<NoComparison; NoEquality>]
     type RangeBuilder() =
@@ -154,8 +198,11 @@ module rec PlanBuilder =
             plan
 
     let plan = Ce.CoreBuilder()
-    let profile id = ProfileBuilder id
     let range = RangeBuilder()
+
+    let profile id = ProfileBuilder id
+    let default_profile = ProfileBuilder "default"
+    let selector id = SelectorBuilder id
 
     type Mode =
         | All
@@ -192,7 +239,7 @@ module rec PlanBuilder =
         let evaluate (plan: Plan) : PipelineOutput =
 
             Log.info "DBT Build Plan"
-        
+
             let env = env.Value
 
             let plan =

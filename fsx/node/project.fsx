@@ -7,5 +7,5 @@ module NodeProject =
 
     let Selector =
         { Selector.Default with
-            kind = "node"
+            id = "node"
             pattern = "package.json" }

@@ -3,7 +3,7 @@ namespace Arquidev.Dbt
 open System.IO
 
 type Selector =
-    { kind: string
+    { id: string
       pattern: string
       patternIgnores: string list
       isRequired: string -> bool
@@ -12,7 +12,7 @@ type Selector =
       expandLeafs: Selector -> string -> string seq }
 
     static member internal Default =
-        { kind = "none"
+        { id = "none"
           pattern = "none"
           patternIgnores = []
           isIgnored = fun _ -> false
