@@ -1,5 +1,6 @@
 #load "solution.fsx"
 #load "../types.fsx"
+#load "../plan.fsx"
 
 namespace Arquidev.Dbt
 
@@ -16,7 +17,7 @@ module DotnetProject =
             |> Path.GetDirectoryName
             |> Path.GetFileName
             |> fun p -> p.ToLowerInvariant()
-            |> fun p -> p.Split('.')
+            |> fun p -> p.Split '.'
             |> fun p -> System.String.Join('-', p)
 
         let toLowerKebabNoRoot (projFullPath: string) : string =
@@ -24,15 +25,15 @@ module DotnetProject =
             |> Path.GetDirectoryName
             |> Path.GetFileName
             |> fun p -> p.ToLowerInvariant()
-            |> fun p -> p.Split('.')
+            |> fun p -> p.Split '.'
             |> fun p -> p[1..]
             |> fun p -> System.String.Join('-', p)
 
     let hasProperty (propertyName: string) (projPath: string) : bool =
-        let xp = XPathDocument(projPath)
+        let xp = XPathDocument projPath
         let n = xp.CreateNavigator()
 
-        n.SelectSingleNode($"/Project/PropertyGroup[*]/{propertyName}[text()='true']")
+        n.SelectSingleNode $"/Project/PropertyGroup[*]/{propertyName}[text()='true']"
         |> (not << isNull)
 
     let isPublishable (p: string) = hasProperty "IsPublishable" p
@@ -41,25 +42,28 @@ module DotnetProject =
 
     let isTest (p: string) = hasProperty "IsTestProject" p
 
-    let private config =
-        { Selector.Default with
-            id = "dotnet"
-            pattern = "*.*sproj"
-            safeName = SafeName.toLowerKebabNoRoot
-            isRequired = isPublishable
-            isIgnored = isTest }
 
-    let isDotnet (p: ProjectPath) = p.kind = config.id
+[<AutoOpen>]
+module DotnetSelectors =
 
-    let Selector slnPath =
-        { config with
-            expandLeafs =
-                fun selector path ->
-                    let projs = Solution.makeDependencyTree slnPath
-                    path |> Solution.findLeafDependants projs selector.isRequired }
+    type selector with
 
-    let AllPublishable = Selector
+        static member generic =
+            selector.define "dotnet" {
+                pattern "*.*sproj"
+                required_when (fun _ -> true)
+                ignored_when DotnetProject.isTest
+                project_id DotnetProject.SafeName.toLowerKebabNoRoot
 
-    let AllPackable slnPath =
-        { Selector slnPath with
-            isRequired = isPackable }
+                expand_leafs (fun selector path ->
+                    let projs = Solution.makeDependencyTree (Solution.findInCwd ())
+                    path |> Solution.findLeafDependants projs selector.isRequired)
+            }
+
+        /// All C#/F# projects with IsPublishable=true
+        static member image =
+            selector.extend selector.generic { required_when DotnetProject.isPublishable }
+
+        /// All C#/F# projects with IsPackable=true
+        static member nuget =
+            selector.extend selector.generic { required_when DotnetProject.isPackable }

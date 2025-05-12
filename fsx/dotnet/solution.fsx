@@ -59,17 +59,17 @@ module Solution =
         let getProjReferenceDeps (projPath: string) : HashSet<string> =
 
             let resolveFullPath (relativePath: string) =
-                Path.GetFullPath(Path.Combine(Path.GetDirectoryName(projPath), relativePath.Replace("\\", "/")))
+                Path.GetFullPath(Path.Combine(Path.GetDirectoryName projPath, relativePath.Replace("\\", "/")))
 
-            let xp = XPathDocument(projPath)
+            let xp = XPathDocument projPath
             let n = xp.CreateNavigator()
-            let references = n.Select("//ProjectReference")
+            let references = n.Select "//ProjectReference"
             let mutable projectReferences = HashSet<string>()
 
             while references.MoveNext() do
 
                 let referenceVal =
-                    match references.Current.SelectSingleNode("@Include") with
+                    match references.Current.SelectSingleNode "@Include" with
                     | null -> references.Current.SelectSingleNode("Include").Value
                     | v -> v.Value
 
@@ -90,7 +90,7 @@ module Solution =
         |> List.collect projs
         |> Seq.collect id
         |> Seq.groupBy fst
-        |> Seq.map (fun (k, g) -> (k, g |> Seq.map snd |> Seq.toList))
+        |> Seq.map (fun (k, g) -> k, g |> Seq.map snd |> Seq.toList)
         |> dict
 
     let findLeafDependants

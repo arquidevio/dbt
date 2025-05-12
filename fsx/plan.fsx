@@ -91,46 +91,50 @@ module rec PlanBuilder =
         | Profile of Profile
         | Range of Range
         | Custom of Plan
-        | RootDir of string
 
     type ProfileFacet = Selector of Selector
 
     [<NoComparison; NoEquality>]
-    type SelectorBuilder(id: string) =
-
-        member _.Yield(_: unit) : Selector = { Selector.Default with id = id }
-        member inline _.Run(s: Selector) = ProfileFacet.Selector s
+    type SelectorBuilder(?id: string, ?defaults: Selector) =
 
         [<CustomOperation("pattern")>]
-        member inline _.Pattern(selector: Selector, pattern: string, ?ignores: string list) =
-            { selector with pattern = pattern }
+        member inline _.Pattern(state, pattern: string) = { state with pattern = pattern }
 
         [<CustomOperation("exclude")>]
-        member inline _.exclude(selector: Selector, exclude: string) =
-            { selector with
-                patternIgnores = exclude :: selector.patternIgnores }
+        member inline _.Exclude(state, exclude: string) =
+            { state with
+                patternIgnores = exclude :: state.patternIgnores }
 
         [<CustomOperation("required_when")>]
-        member inline _.RequiredWhen(selector: Selector, isRequired: string -> bool) =
-            { selector with
-                isRequired = isRequired }
+        member inline _.RequiredWhen(state, isRequired: string -> bool) = { state with isRequired = isRequired }
 
         [<CustomOperation("ignored_when")>]
-        member inline _.IgnoredWhen(selector: Selector, isIgnored: string -> bool) =
-            { selector with isIgnored = isIgnored }
+        member inline _.IgnoredWhen(state, isIgnored: string -> bool) = { state with isIgnored = isIgnored }
 
         [<CustomOperation("project_id")>]
-        member inline _.ProjectId(selector: Selector, projectId: string -> string) =
-            { selector with safeName = projectId }
+        member inline _.ProjectId(state: Selector, projectId: string -> string) = { state with safeName = projectId }
 
         [<CustomOperation("expand_leafs")>]
-        member inline _.ExpandLeafs(selector: Selector, expandLeafs: Selector -> string -> string seq) =
-            { selector with
-                expandLeafs = expandLeafs }
+        member inline _.ExpandLeafs(state, expandLeafs: Selector -> string -> string seq) =
+            { state with expandLeafs = expandLeafs }
+
+        member inline _.Delay(f: unit -> Selector) = f ()
+
+        member _.Yield(state: unit) =
+            let result = defaults |> Option.defaultValue Selector.Default
+
+            match id with
+            | Some id -> { result with id = id }
+            | None -> result
+
+        member _.Run state = state
+
+
 
     [<NoComparison; NoEquality>]
     type ProfileBuilder(id: string) =
         inherit Ce.CoreBuilder()
+        member _.Delay(f: unit -> Selector list) = f () |> List.map Selector
 
         member _.Run state =
 
@@ -160,8 +164,8 @@ module rec PlanBuilder =
         [<CustomOperation("to_ref")>]
         member inline _.ToRef(range: Range, toRef: string) = { range with toRef = Some toRef }
 
-
-    type Ce.CoreBuilder with
+    type PlanBuilder() =
+        inherit Ce.CoreBuilder()
         member _.Delay(f: unit -> Plan list) = f () |> List.map Custom
         member _.Yield(state: Plan list) = state |> List.map Custom
 
@@ -197,12 +201,16 @@ module rec PlanBuilder =
 
             plan
 
-    let plan = Ce.CoreBuilder()
     let range = RangeBuilder()
 
     let profile id = ProfileBuilder id
     let default_profile = ProfileBuilder "default"
-    let selector id = SelectorBuilder id
+
+    type selector =
+        static member define id = SelectorBuilder id
+        static member extend defaults = SelectorBuilder(defaults = defaults)
+
+    let plan = PlanBuilder()
 
     type Mode =
         | All
