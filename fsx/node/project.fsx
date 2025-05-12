@@ -1,11 +1,14 @@
 #load "../types.fsx"
+#load "../plan.fsx"
 
 namespace Arquidev.Dbt
 
-[<RequireQualifiedAccess>]
-module NodeProject =
 
-    let Selector =
-        { Selector.Default with
-            id = "node"
-            pattern = "package.json" }
+[<AutoOpen>]
+module NodeSelectors =
+
+    type selector with
+        static member node: Selectors = Selectors()
+
+    and Selectors() =
+        member _.image = selector.define "node" { pattern "package.json" }

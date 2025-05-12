@@ -127,16 +127,16 @@ module rec PlanBuilder =
             | Some id -> { result with id = id }
             | None -> result
 
-        member _.Run state = state
-
+        member _.Run(state: Selector) : Selector = state
 
 
     [<NoComparison; NoEquality>]
     type ProfileBuilder(id: string) =
         inherit Ce.CoreBuilder()
-        member _.Delay(f: unit -> Selector list) = f () |> List.map Selector
+        member _.Delay(f: unit -> Selector) = [ f () |> Selector ]
+        member _.Yield(state: Selector) = [ state |> Selector ]
 
-        member _.Run state =
+        member _.Run(state: ProfileFacet list) =
 
             Profile
                 { Profile.Default with

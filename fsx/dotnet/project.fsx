@@ -47,8 +47,10 @@ module DotnetProject =
 module DotnetSelectors =
 
     type selector with
+        static member dotnet: Selectors = Selectors()
 
-        static member generic =
+    and Selectors() =
+        member _.generic =
             selector.define "dotnet" {
                 pattern "*.*sproj"
                 required_when (fun _ -> true)
@@ -61,9 +63,8 @@ module DotnetSelectors =
             }
 
         /// All C#/F# projects with IsPublishable=true
-        static member image =
-            selector.extend selector.generic { required_when DotnetProject.isPublishable }
+        member x.image =
+            selector.extend x.generic { required_when DotnetProject.isPublishable }
 
         /// All C#/F# projects with IsPackable=true
-        static member nuget =
-            selector.extend selector.generic { required_when DotnetProject.isPackable }
+        member x.nuget = selector.extend x.generic { required_when DotnetProject.isPackable }
