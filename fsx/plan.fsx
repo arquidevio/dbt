@@ -86,12 +86,12 @@ module Pipeline =
             let output =
                 { kind = config.id
                   fileName = file.Name
-                  dirName = relativeDir.Split Path.PathSeparator |> Array.last
                   fullPath = p
                   fullDir = file.DirectoryName
                   relativePath = Path.GetRelativePath(cwd, p)
-                  relativeDir = Path.GetRelativePath(cwd, file.DirectoryName)
-                  projectId = "" }
+                  projectId = relativeDir.ToLowerInvariant()
+                    |> fun p -> p.Replace(" ", "-")
+                    |> fun p -> p.Split [|'.'; '_'; |] |> String.concat "-" }
 
             { output with
                 projectId = config.projectId output })

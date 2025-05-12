@@ -9,21 +9,6 @@ open System.Xml.XPath
 [<RequireQualifiedAccess>]
 module DotnetProject =
 
-    module ProjectId =
-
-        let toLowerKebab (p: ProjectMetadata) : string =
-            p.dirName
-            |> _.ToLowerInvariant()
-            |> _.Split('.')
-            |> fun p -> System.String.Join('-', p)
-
-        let toLowerKebabNoRoot (p: ProjectMetadata) : string =
-            p.dirName
-            |> _.ToLowerInvariant()
-            |> _.Split('.')
-            |> fun p -> p[1..]
-            |> fun p -> System.String.Join('-', p)
-
     let hasProperty (propertyName: string) (projPath: string) : bool =
         let xp = XPathDocument projPath
         let n = xp.CreateNavigator()
@@ -50,8 +35,6 @@ module DotnetSelectors =
                 pattern "*.*sproj"
                 required_when (fun _ -> true)
                 ignored_when DotnetProject.isTest
-                project_id DotnetProject.ProjectId.toLowerKebabNoRoot
-
                 expand_leafs (fun selector path ->
                     let projs = Solution.makeDependencyTree (Solution.findInCwd ())
                     path |> Solution.findLeafDependants projs selector.isRequired)

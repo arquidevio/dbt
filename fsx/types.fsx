@@ -4,11 +4,9 @@ open System.IO
 
 type ProjectMetadata =
     { fileName: string
-      dirName: string
       fullPath: string
       fullDir: string
       relativePath: string
-      relativeDir: string
       projectId: string
       kind: string }
 
@@ -27,7 +25,7 @@ type Selector =
           patternIgnores = []
           isIgnored = fun _ -> false
           isRequired = fun _ -> true
-          projectId = fun p -> p.dirName |> fun p -> p.ToLowerInvariant().Replace(".", "-")
+          projectId = fun p -> p.projectId
           expandLeafs = fun _ path -> Seq.singleton path }
 
 

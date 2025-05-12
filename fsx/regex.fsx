@@ -2,6 +2,7 @@ namespace Arquidev.Dbt
 
 open System.Text.RegularExpressions
 
+[<AutoOpen>]
 module Regex =
 
     let (|ParseRegex|_|) regex str =
