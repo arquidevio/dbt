@@ -2,13 +2,23 @@ namespace Arquidev.Dbt
 
 open System.IO
 
+type ProjectMetadata =
+    { fileName: string
+      dirName: string
+      fullPath: string
+      fullDir: string
+      relativePath: string
+      relativeDir: string
+      projectId: string
+      kind: string }
+
 type Selector =
     { id: string
       pattern: string
       patternIgnores: string list
       isRequired: string -> bool
       isIgnored: string -> bool
-      safeName: string -> string
+      projectId: ProjectMetadata -> string
       expandLeafs: Selector -> string -> string seq }
 
     static member internal Default =
@@ -17,19 +27,10 @@ type Selector =
           patternIgnores = []
           isIgnored = fun _ -> false
           isRequired = fun _ -> true
-          safeName =
-            fun path ->
-                path
-                |> Path.GetDirectoryName
-                |> Path.GetFileName
-                |> fun p -> p.ToLowerInvariant().Replace(".", "-")
+          projectId = fun p -> p.dirName |> fun p -> p.ToLowerInvariant().Replace(".", "-")
           expandLeafs = fun _ path -> Seq.singleton path }
 
-type ProjectPath =
-    { path: string
-      dir: string
-      safeName: string
-      kind: string }
+
 
 type BuildSpec = { docker: DockerBuildSpec list }
 

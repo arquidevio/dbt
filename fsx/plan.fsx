@@ -79,10 +79,22 @@ module Pipeline =
             paths
         |> Seq.filter config.isRequired
         |> Seq.map (fun p ->
-            { kind = config.id
-              path = p
-              dir = FileInfo(p).DirectoryName
-              safeName = config.safeName p })
+            let file = FileInfo p
+            let cwd = Directory.GetCurrentDirectory()
+            let relativeDir = Path.GetRelativePath(cwd, file.DirectoryName)
+
+            let output =
+                { kind = config.id
+                  fileName = file.Name
+                  dirName = relativeDir.Split Path.PathSeparator |> Array.last
+                  fullPath = p
+                  fullDir = file.DirectoryName
+                  relativePath = Path.GetRelativePath(cwd, p)
+                  relativeDir = Path.GetRelativePath(cwd, file.DirectoryName)
+                  projectId = "" }
+
+            { output with
+                projectId = config.projectId output })
 
 [<AutoOpen>]
 module rec PlanBuilder =
@@ -112,7 +124,8 @@ module rec PlanBuilder =
         member inline _.IgnoredWhen(state, isIgnored: string -> bool) = { state with isIgnored = isIgnored }
 
         [<CustomOperation("project_id")>]
-        member inline _.ProjectId(state: Selector, projectId: string -> string) = { state with safeName = projectId }
+        member inline _.ProjectId(state: Selector, projectId: ProjectMetadata -> string) =
+            { state with projectId = projectId }
 
         [<CustomOperation("expand_leafs")>]
         member inline _.ExpandLeafs(state, expandLeafs: Selector -> string -> string seq) =
@@ -217,7 +230,7 @@ module rec PlanBuilder =
         | Diff
 
     type PipelineOutput =
-        { requiredProjects: ProjectPath list
+        { requiredProjects: ProjectMetadata list
           changeSetRange: ChangeSetRange option }
 
     and ChangeSetRange =
