@@ -26,11 +26,13 @@ and Range =
 and Profile =
     { id: string
       changeKeyPrefixRegex: string option
+      postActions: (PlanOutput -> unit) list
       selectors: Selector list }
 
     static member Default =
         { id = "default"
           changeKeyPrefixRegex = None
+          postActions = []
           selectors = [] }
 
 [<RequireQualifiedAccess>]
@@ -114,6 +116,7 @@ module rec PlanBuilder =
     type ProfileFacet =
         | Selector of Selector
         | ChangeKeyRegex of string
+        | PostAction of (PlanOutput -> unit)
 
     [<NoComparison; NoEquality>]
     type SelectorBuilder(?id: string, ?defaults: Selector) =
@@ -161,6 +164,11 @@ module rec PlanBuilder =
         [<CustomOperation("change_key_regex")>]
         member inline _.ChangeKeyRegex(state, regex: string) = [ ChangeKeyRegex regex ] @ state
 
+
+        [<CustomOperation("post_action")>]
+        member inline _.PostAction(state, action: PlanOutput -> unit) = [ PostAction action ] @ state
+
+
         member _.Run(state: ProfileFacet list) =
 
             Profile
@@ -170,6 +178,11 @@ module rec PlanBuilder =
                         state
                         |> List.tryPick (function
                             | ChangeKeyRegex x -> Some x
+                            | _ -> None)
+                    postActions =
+                        state
+                        |> List.choose (function
+                            | PostAction x -> Some x
                             | _ -> None)
                     selectors =
                         state
@@ -331,4 +344,16 @@ module rec PlanBuilder =
                     |> Option.flatten }
 
             Log.debug "%A" result
+
+            for action in profile.postActions do
+                action result
+
             result
+
+        let exitIfEmpty (output: PlanOutput) =
+            if output.requiredProjects.Length = 0 then
+                Log.info "No project changes. Exiting"
+                exit 0
+                output
+            else
+                output

@@ -7,6 +7,8 @@
 
 namespace Arquidev.Dbt
 
+#load "../log.fsx"
+
 open Fake.Core
 open Ionide.ProjInfo.InspectSln
 open System.Xml.XPath
@@ -106,8 +108,10 @@ module Solution =
 
         find [] projectPath |> Seq.distinct
 
-    let generateRestoreList (slnPath: string) : unit =
-        let slnDir = Path.GetDirectoryName slnPath
+    let generateRestoreList (slnDir: string) : unit =
+        Log.header "RESTORE LIST"
+        let slnPath = findInDir slnDir 
+        Log.debug $"Solution: {slnPath}"
         let originalPwd = Directory.GetCurrentDirectory()
 
         try
@@ -129,7 +133,7 @@ module Solution =
                 |> Proc.start
 
             findProjects (fun _ -> true) slnPath
-            |> Seq.map (fun path -> path.Replace(slnDir, String.Empty).Trim('/'))
+            |> Seq.map (fun path -> path.Replace(slnDir, String.Empty).Trim '/')
             |> Seq.iter (fun path -> input.Value.Write(Text.Encoding.UTF8.GetBytes(path + Environment.NewLine)))
 
             input.Value.Flush()
