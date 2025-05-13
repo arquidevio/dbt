@@ -5,6 +5,7 @@ type ProjectMetadata =
       fullPath: string
       fullDir: string
       dir: string
+      dirSlug: string
       relativePath: string
       projectId: string
       kind: string }

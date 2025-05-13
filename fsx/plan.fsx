@@ -98,6 +98,7 @@ module Pipeline =
                   fullDir = file.DirectoryName
                   relativePath = Path.GetRelativePath(cwd, p)
                   dir = file.Directory.Name
+                  dirSlug = file.Directory.Name.ToLowerInvariant().Replace(".", "-")
                   projectId =
                     relativeDir.ToLowerInvariant()
                     |> fun p -> p.Replace(" ", "-")
