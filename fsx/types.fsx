@@ -1,7 +1,5 @@
 namespace Arquidev.Dbt
 
-open System.IO
-
 type ProjectMetadata =
     { fileName: string
       fullPath: string
@@ -28,7 +26,18 @@ type Selector =
           projectId = fun p -> p.projectId
           expandLeafs = fun _ path -> Seq.singleton path }
 
+type ChangeSetRange =
+    { baseCommits: string list
+      currentCommit: string }
 
+type PlanOutput =
+    { requiredProjects: ProjectMetadata list
+      changeKeys: string list option
+      changeSetRange: ChangeSetRange option }
+
+type DiffResult =
+    { effectiveRange: ChangeSetRange
+      dirs: string seq }
 
 type BuildSpec = { docker: DockerBuildSpec list }
 

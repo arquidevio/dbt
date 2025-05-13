@@ -4,6 +4,7 @@ namespace Arquidev.Dbt
 #load "env.fsx"
 #load "log.fsx"
 #load "git-v2.fsx"
+#load "tools/git.fsx"
 #load "ci/github/last-success-sha.fsx"
 #load "ce.fsx"
 
@@ -11,6 +12,7 @@ open Arquidev.Dbt
 
 type Plan =
     { profiles: Map<string, Profile> option
+
       range: Range option }
 
     static member Default = { profiles = None; range = None }
@@ -23,9 +25,13 @@ and Range =
 
 and Profile =
     { id: string
+      changeKeyPrefixRegex: string option
       selectors: Selector list }
 
-    static member Default = { id = "default"; selectors = [] }
+    static member Default =
+        { id = "default"
+          changeKeyPrefixRegex = None
+          selectors = [] }
 
 [<RequireQualifiedAccess>]
 module Pipeline =
@@ -89,9 +95,10 @@ module Pipeline =
                   fullPath = p
                   fullDir = file.DirectoryName
                   relativePath = Path.GetRelativePath(cwd, p)
-                  projectId = relativeDir.ToLowerInvariant()
+                  projectId =
+                    relativeDir.ToLowerInvariant()
                     |> fun p -> p.Replace(" ", "-")
-                    |> fun p -> p.Split [|'.'; '_'; |] |> String.concat "-" }
+                    |> fun p -> p.Split [| '.'; '_' |] |> String.concat "-" }
 
             { output with
                 projectId = config.projectId output })
@@ -104,7 +111,9 @@ module rec PlanBuilder =
         | Range of Range
         | Custom of Plan
 
-    type ProfileFacet = Selector of Selector
+    type ProfileFacet =
+        | Selector of Selector
+        | ChangeKeyRegex of string
 
     [<NoComparison; NoEquality>]
     type SelectorBuilder(?id: string, ?defaults: Selector) =
@@ -149,15 +158,24 @@ module rec PlanBuilder =
         member _.Delay(f: unit -> Selector) = [ f () |> Selector ]
         member _.Yield(state: Selector) = [ state |> Selector ]
 
+        [<CustomOperation("change_key_regex")>]
+        member inline _.ChangeKeyRegex(state, regex: string) = [ ChangeKeyRegex regex ] @ state
+
         member _.Run(state: ProfileFacet list) =
 
             Profile
                 { Profile.Default with
                     id = id
+                    changeKeyPrefixRegex =
+                        state
+                        |> List.tryPick (function
+                            | ChangeKeyRegex x -> Some x
+                            | _ -> None)
                     selectors =
                         state
                         |> List.choose (function
-                            | Selector id -> Some id) }
+                            | Selector id -> Some id
+                            | _ -> None) }
 
 
     [<NoComparison; NoEquality>]
@@ -229,14 +247,6 @@ module rec PlanBuilder =
         | All
         | Diff
 
-    type PipelineOutput =
-        { requiredProjects: ProjectMetadata list
-          changeSetRange: ChangeSetRange option }
-
-    and ChangeSetRange =
-        { baseCommits: string list
-          currentCommit: string }
-
     type DbtEnv =
         { [<Default("diff")>]
           DBT_MODE: Mode
@@ -257,7 +267,7 @@ module rec PlanBuilder =
                         env.DBT_BASE_COMMIT
                         |> Option.orElseWith (fun () -> LastSuccessSha.getLastSuccessCommitHash () |> _.toOption) })
 
-        let evaluate (plan: Plan) : PipelineOutput =
+        let evaluate (plan: Plan) : PlanOutput =
 
             Log.info "DBT Build Plan"
 
@@ -297,14 +307,28 @@ module rec PlanBuilder =
                           currentCommit = result.effectiveRange.currentCommit }
                 | All -> GitDiff.allDirs (), None
 
+            let profile =
+                match plan.profiles with
+                | Some p when p |> Map.count > 0 && p.ContainsKey profile -> p[profile]
+                | _ -> failwithf $"Profile {profile} not configured"
+
             let result =
                 { requiredProjects =
-                    match plan.profiles with
-                    | Some p when p |> Map.count > 0 && p.ContainsKey profile -> p[profile].selectors
-                    | _ -> failwithf $"Profile {profile} not configured"
+                    profile.selectors
                     |> Seq.collect (Pipeline.findRequiredProjects dirs)
                     |> Seq.toList
-                  changeSetRange = diffRange }
+                  changeSetRange = diffRange
+                  changeKeys =
+                    diffRange
+                    |> Option.map (fun r ->
+                        profile.changeKeyPrefixRegex
+                        |> Option.map (fun key ->
+                            r.baseCommits
+                            |> Seq.collect (fun baseCommit ->
+                                Git.Repo(".").ParseCommitMessage baseCommit r.currentCommit key)
+                            |> Seq.distinct
+                            |> Seq.toList))
+                    |> Option.flatten }
 
             Log.debug "%A" result
             result

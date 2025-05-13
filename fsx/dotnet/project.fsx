@@ -35,6 +35,7 @@ module DotnetSelectors =
                 pattern "*.*sproj"
                 required_when (fun _ -> true)
                 ignored_when DotnetProject.isTest
+
                 expand_leafs (fun selector path ->
                     let projs = Solution.makeDependencyTree (Solution.findInCwd ())
                     path |> Solution.findLeafDependants projs selector.isRequired)

@@ -1,18 +1,12 @@
 #r "paket: nuget Fake.Tools.Git ~> 6.0"
-#load "log.fsx"
 
 namespace Arquidev.Dbt
 
+#load "types.fsx"
+#load "log.fsx"
+
 open Fake.Tools.Git
 open System.IO
-
-type DiffResult =
-    { effectiveRange: EffectiveDiffRange
-      dirs: string seq }
-
-and EffectiveDiffRange =
-    { baseCommits: string list
-      currentCommit: string }
 
 [<RequireQualifiedAccess>]
 module GitDiff =
