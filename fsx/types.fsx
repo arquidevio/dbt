@@ -8,6 +8,14 @@ type ProjectMetadata =
       projectId: string
       kind: string }
 
+    member x.IdTupleBy([<System.ParamArray>] c: char array) =
+        let chunks = x.projectId.Split(c, 2)
+        chunks[0], chunks[1]
+
+    member x.IdTripleBy([<System.ParamArray>] c: char array) =
+        let chunks = x.projectId.Split(c, 3)
+        chunks[0], chunks[1], chunks[2]
+
 type Selector =
     { id: string
       pattern: string
