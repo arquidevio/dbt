@@ -110,7 +110,7 @@ module Solution =
 
     let generateRestoreList (slnDir: string) : unit =
         Log.header "RESTORE LIST"
-        let slnPath = findInDir slnDir 
+        let slnPath = findInDir slnDir
         Log.debug $"Solution: {slnPath}"
         let originalPwd = Directory.GetCurrentDirectory()
 
