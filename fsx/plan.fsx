@@ -357,3 +357,9 @@ module rec PlanBuilder =
                 output
             else
                 output
+
+        let summary (output: PlanOutput) =
+            Log.header "REQUIRED PROJECTS"
+
+            for p in output.requiredProjects do
+                Log.info $"> {p.projectId} {p.fullPath}"
