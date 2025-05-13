@@ -4,9 +4,9 @@
 #load "../fsx/dotnet/solution.fsx"
 #load "../fsx/node/project.fsx"
 #load "../fsx/utils.fsx"
-#load "../fsx/pipeline.fsx"
+#load "../fsx/plan.fsx"
 #load "../fsx/types.fsx"
 
 open Arquidev.Dbt
 
-GitDiff.dirsFromDiff (Env.get<GitDiffEnv> ())
+GitDiff.dirsFromDiff (Some "HEAD^1") (Some "HEAD")

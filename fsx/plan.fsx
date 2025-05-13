@@ -3,7 +3,7 @@ namespace Arquidev.Dbt
 #load "types.fsx"
 #load "env.fsx"
 #load "log.fsx"
-#load "git-v2.fsx"
+#load "git.fsx"
 #load "tools/git.fsx"
 #load "ci/github/last-success-sha.fsx"
 #load "ce.fsx"
