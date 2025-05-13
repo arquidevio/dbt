@@ -345,18 +345,14 @@ module rec PlanBuilder =
 
             Log.debug "%A" result
 
+            if result.requiredProjects.Length = 0 then
+                Log.info "No project changes. Exiting"
+                exit 0
+
             for action in profile.postActions do
                 action result
 
             result
-
-        let exitIfEmpty (output: PlanOutput) =
-            if output.requiredProjects.Length = 0 then
-                Log.info "No project changes. Exiting"
-                exit 0
-                output
-            else
-                output
 
         let summary (output: PlanOutput) =
             Log.header "REQUIRED PROJECTS"
