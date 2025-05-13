@@ -26,12 +26,13 @@ module DotnetProject =
 [<AutoOpen>]
 module DotnetSelectors =
 
-    type selector with
-        static member dotnet: Selectors = Selectors()
+    type SelectorBuilder with
+        member _.dotnet: Selectors = Selectors()
 
     and Selectors() =
         member _.generic =
-            selector.define "dotnet" {
+            selector {
+                id "dotnet"
                 pattern "*.*sproj"
                 required_when (fun _ -> true)
                 ignored_when DotnetProject.isTest
@@ -43,7 +44,14 @@ module DotnetSelectors =
 
         /// All C#/F# projects with IsPublishable=true
         member x.image =
-            selector.extend x.generic { required_when DotnetProject.isPublishable }
+            selector {
+                required_when DotnetProject.isPublishable
+                extend x.generic
+            }
 
         /// All C#/F# projects with IsPackable=true
-        member x.nuget = selector.extend x.generic { required_when DotnetProject.isPackable }
+        member x.nuget =
+            selector {
+                required_when DotnetProject.isPackable
+                extend x.generic
+            }
