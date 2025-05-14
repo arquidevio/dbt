@@ -236,7 +236,7 @@ module rec PlanBuilder =
                 |> Option.map (fun x -> { s with expandLeafs = x })
                 |> Option.defaultValue s
 
-        Log.debug "%A -> %A" state output
+        Log.debug "Make selector: %A -> %A" state output
         output
 
     [<NoComparison; NoEquality>]
@@ -313,7 +313,7 @@ module rec PlanBuilder =
                 { s with
                     selectors = s.selectors @ selectors }
 
-        Log.debug "%A -> %A" state output
+        Log.debug "Make profile: %A -> %A" state output
         output
 
     [<NoComparison; NoEquality>]
