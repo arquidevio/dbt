@@ -232,8 +232,8 @@ module rec PlanBuilder =
         [<CustomOperation("id")>]
         member inline _.Id(state, id: string) = [ ProfileId id ] @ state
 
-        //[<CustomOperation("extend")>]
-        //member inline _.Extend(state, defaults: Profile) = [ BaseProfile defaults ] @ state
+        [<CustomOperation("extend")>]
+        member inline _.Extend(state, defaults: Profile) = [ BaseProfile defaults ] @ state
 
         member _.Run(state: ProfileFacet list) =
 
@@ -294,8 +294,8 @@ module rec PlanBuilder =
         member _.Delay(f: unit -> Profile) = [ f () |> Profile ]
         member _.Yield(state: Profile) = [ state |> Profile ]
 
-        //[<CustomOperation("extend")>]
-        //member inline _.Extend(state, defaults: Plan) = [ BasePlan defaults ] @ state
+        [<CustomOperation("extend")>]
+        member inline _.Extend(state, defaults: Plan) = [ BasePlan defaults ] @ state
 
         member _.Run state =
             let defaults =
