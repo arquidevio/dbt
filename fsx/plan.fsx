@@ -116,14 +116,14 @@ module rec PlanBuilder =
 
     type ProfileFacet =
         | ProfileId of string
-        | BaseProfile of Profile
-        | Selector of Selector
+        | BaseProfile of ProfileFacet list
+        | Selector of SelectorFacet list
         | ChangeKeyRegex of regex: string * replacement: string option
         | PostAction of (PlanOutput -> unit)
 
     type SelectorFacet =
         | SelectorId of string
-        | BaseSelector of Selector
+        | BaseSelector of SelectorFacet list
         | Pattern of string
         | Exclude of string
         | RequiredWhen of (string -> bool)
@@ -158,69 +158,94 @@ module rec PlanBuilder =
             [ ExpandLeafs expandLeafs ] @ state
 
         [<CustomOperation("extend")>]
-        member inline _.Extend(state, defaults: Selector) = [ BaseSelector defaults ] @ state
+        member inline _.Extend(state, defaults: SelectorFacet list) = [ BaseSelector defaults ] @ state
 
-        member _.Run(state: SelectorFacet list) : Selector =
+        member _.Run(state: SelectorFacet list) : SelectorFacet list =
 
-            let tryPick f = state |> List.tryPick f
+            state
+            |> List.collect (fun f ->
+                match f with
+                | BaseSelector x -> x
+                | x -> [ x ])
 
-            let defaults =
-                tryPick (function
-                    | BaseSelector x -> Some x
-                    | _ -> None)
-                |> Option.defaultValue Selector.Default
 
-            let id =
-                tryPick (function
-                    | SelectorId x -> Some x
-                    | _ -> None)
 
-            let pattern =
-                tryPick (function
-                    | Pattern x -> Some x
-                    | _ -> None)
 
-            let excludes =
-                state
-                |> List.choose (function
-                    | Exclude x -> Some x
-                    | _ -> None)
+    let makeSelector (state: SelectorFacet list) =
 
-            let requiredWhen =
-                tryPick (function
-                    | RequiredWhen f -> Some f
-                    | _ -> None)
+        let state = state |> List.rev
+        let tryPick f = state |> List.tryPick f
 
-            let ignoredWhen =
-                tryPick (function
-                    | IgnoredWhen f -> Some f
-                    | _ -> None)
+        let id =
+            tryPick (function
+                | SelectorId x -> Some x
+                | _ -> None)
 
-            let projectId =
-                tryPick (function
-                    | ProjectId f -> Some f
-                    | _ -> None)
+        let pattern =
+            tryPick (function
+                | Pattern x -> Some x
+                | _ -> None)
 
-            let expandLeafs =
-                tryPick (function
-                    | ExpandLeafs f -> Some f
-                    | _ -> None)
+        let excludes =
+            state
+            |> List.choose (function
+                | Exclude x -> Some x
+                | _ -> None)
 
-            { defaults with
-                id = id |> Option.defaultValue defaults.id
-                pattern = pattern |> Option.defaultValue defaults.pattern
-                patternIgnores = excludes
-                isRequired = requiredWhen |> Option.defaultValue defaults.isRequired
-                isIgnored = ignoredWhen |> Option.defaultValue defaults.isIgnored
-                projectId = projectId |> Option.defaultValue defaults.projectId
-                expandLeafs = expandLeafs |> Option.defaultValue defaults.expandLeafs }
+        let requiredWhen =
+            tryPick (function
+                | RequiredWhen f -> Some f
+                | _ -> None)
+
+        let ignoredWhen =
+            tryPick (function
+                | IgnoredWhen f -> Some f
+                | _ -> None)
+
+        let projectId =
+            tryPick (function
+                | ProjectId f -> Some f
+                | _ -> None)
+
+        let expandLeafs =
+            tryPick (function
+                | ExpandLeafs f -> Some f
+                | _ -> None)
+
+        let output =
+            Selector.Default
+            |> fun s -> id |> Option.map (fun x -> { s with id = x }) |> Option.defaultValue s
+            |> fun s -> pattern |> Option.map (fun x -> { s with pattern = x }) |> Option.defaultValue s
+            |> fun s ->
+                { s with
+                    patternIgnores = s.patternIgnores @ excludes }
+            |> fun s ->
+                requiredWhen
+                |> Option.map (fun x -> { s with isRequired = x })
+                |> Option.defaultValue s
+            |> fun s ->
+                ignoredWhen
+                |> Option.map (fun x -> { s with isIgnored = x })
+                |> Option.defaultValue s
+            |> fun s ->
+                projectId
+                |> Option.map (fun x -> { s with projectId = x })
+                |> Option.defaultValue s
+            |> fun s ->
+                expandLeafs
+                |> Option.map (fun x -> { s with expandLeafs = x })
+                |> Option.defaultValue s
+
+        Log.debug "%A -> %A" state output
+        output
 
     [<NoComparison; NoEquality>]
     type ProfileBuilder() =
         inherit Ce.CoreBuilder()
 
-        member _.Delay(f: unit -> Selector) = [ f () |> Selector ]
-        member _.Yield(state: Selector) = [ state |> Selector ]
+        // this was causing an empty selector list being added
+        //member _.Delay(f: unit -> SelectorFacet list) = [ f () |> Selector ]
+        member _.Yield(state: SelectorFacet list) = [ state |> Selector ]
 
         [<CustomOperation("change_key_regex")>]
         member inline _.ChangeKeyRegex(state, regex: string, ?replacement: string) =
@@ -233,43 +258,63 @@ module rec PlanBuilder =
         member inline _.Id(state, id: string) = [ ProfileId id ] @ state
 
         [<CustomOperation("extend")>]
-        member inline _.Extend(state, defaults: Profile) = [ BaseProfile defaults ] @ state
+        member inline _.Extend(state, defaults: ProfileFacet list) = [ BaseProfile defaults ] @ state
 
         member _.Run(state: ProfileFacet list) =
 
-            let defaults =
-                state
-                |> List.tryPick (function
-                    | BaseProfile x -> Some x
-                    | _ -> None)
-                |> Option.defaultValue Profile.Default
+            state
+            |> List.collect (fun f ->
+                match f with
+                | BaseProfile x -> x
+                | x -> [ x ])
 
-            let id =
-                state
-                |> List.tryPick (function
-                    | ProfileId x -> Some x
-                    | _ -> None)
 
-            { id = id |> Option.defaultValue "default"
-              changeKeyPrefixRegex =
-                state
-                |> List.tryPick (function
-                    | ChangeKeyRegex(regex, replace) -> Some(regex, replace)
-                    | _ -> None)
-              postActions =
-                defaults.postActions
-                @ (state
-                   |> List.choose (function
-                       | PostAction x -> Some x
-                       | _ -> None))
-              selectors =
-                defaults.selectors
-                @ (state
-                   |> List.choose (function
-                       | Selector id -> Some id
-                       | _ -> None))
-                |> List.filter (fun s -> defaults.selectors |> List.exists (fun l -> l.id = s.id) |> not) }
+    let makeProfile (state: ProfileFacet list) =
 
+        let revState = state |> List.rev
+        let tryPick f = revState |> List.tryPick f
+
+        let id =
+            state
+            |> List.tryPick (function
+                | ProfileId x -> Some x
+                | _ -> None)
+
+        let changeKeyPrefixRegex =
+            state
+            |> List.tryPick (function
+                | ChangeKeyRegex(regex, replace) -> Some(regex, replace)
+                | _ -> None)
+
+        let postActions =
+            state
+            |> List.choose (function
+                | PostAction x -> Some x
+                | _ -> None)
+
+        let selectors =
+            state
+            |> List.choose (function
+                | Selector sf -> Some(sf |> makeSelector)
+                | _ -> None)
+
+
+        let output =
+            Profile.Default
+            |> fun s -> id |> Option.map (fun x -> { s with id = x }) |> Option.defaultValue s
+            |> fun s ->
+                changeKeyPrefixRegex
+                |> Option.map (fun x -> { s with changeKeyPrefixRegex = Some x })
+                |> Option.defaultValue s
+            |> fun s ->
+                { s with
+                    postActions = s.postActions @ postActions }
+            |> fun s ->
+                { s with
+                    selectors = s.selectors @ selectors }
+
+        Log.debug "%A -> %A" state output
+        output
 
     [<NoComparison; NoEquality>]
     type RangeBuilder() =
@@ -291,8 +336,8 @@ module rec PlanBuilder =
     type PlanBuilder() =
         inherit Ce.CoreBuilder()
 
-        member _.Delay(f: unit -> Profile) = [ f () |> Profile ]
-        member _.Yield(state: Profile) = [ state |> Profile ]
+        //member _.Delay(f: unit -> ProfileFacet list) = [ f () |> makeProfile |> Profile ]
+        member _.Yield(state: ProfileFacet list) = [ state |> makeProfile |> Profile ]
 
         [<CustomOperation("extend")>]
         member inline _.Extend(state, defaults: Plan) = [ BasePlan defaults ] @ state
