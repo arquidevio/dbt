@@ -6,6 +6,7 @@ namespace Arquidev.Dbt
 module Log =
     [<RequireQualifiedAccess>]
     type LogLevel =
+        | trace
         | debug
         | info
         | warn
@@ -26,6 +27,7 @@ module Log =
                     printfn "%s" str)
             fmt
 
+    let trace<'a> = output<'a> LogLevel.trace
     let debug<'a> = output<'a> LogLevel.debug
     let info<'a> = output<'a> LogLevel.info
     let warn<'a> = output<'a> LogLevel.warn

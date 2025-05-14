@@ -168,9 +168,6 @@ module rec PlanBuilder =
                 | BaseSelector x -> x
                 | x -> [ x ])
 
-
-
-
     let makeSelector (state: SelectorFacet list) =
 
         let state = state |> List.rev
@@ -236,7 +233,7 @@ module rec PlanBuilder =
                 |> Option.map (fun x -> { s with expandLeafs = x })
                 |> Option.defaultValue s
 
-        Log.debug "Make selector: %A -> %A" state output
+        Log.trace "Make selector: %A -> %A" state output
         output
 
     [<NoComparison; NoEquality>]
@@ -313,7 +310,7 @@ module rec PlanBuilder =
                 { s with
                     selectors = s.selectors @ selectors }
 
-        Log.debug "Make profile: %A -> %A" state output
+        Log.trace "Make profile: %A -> %A" state output
         output
 
     [<NoComparison; NoEquality>]
@@ -414,7 +411,7 @@ module rec PlanBuilder =
                                   toRef = env.DBT_CURRENT_COMMIT } }
                 | Some _ -> plan
 
-            Log.debug "%A" plan
+            Log.trace "%A" plan
             Log.info $"Mode: %s{env.DBT_MODE.ToString().ToLower()}"
             Log.info $"Profile: %s{env.DBT_PROFILE}"
 
@@ -461,7 +458,7 @@ module rec PlanBuilder =
                             |> Seq.toList))
                     |> Option.flatten }
 
-            Log.debug "%A" result
+            Log.trace "%A" result
 
             if result.requiredProjects.Length = 0 then
                 Log.info "No project changes. Exiting"
