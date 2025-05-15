@@ -16,13 +16,9 @@ module Log =
         { [<Default("info")>]
           DBT_LOG_LEVEL: LogLevel }
 
-    let mutable currentLevel = LogLevel.info
+    let private env = Lazy<LogEnv>(fun () -> Env.get<LogEnv> ())
 
-    let private env = Lazy<LogEnv>(fun () -> 
-        let env = Env.get<LogEnv> ()
-        currentLevel <- env.DBT_LOG_LEVEL
-        env
-    )
+    let mutable currentLevel = env.Value.DBT_LOG_LEVEL
 
     let output<'a> level fmt =
         Printf.kprintf<unit, 'a>
