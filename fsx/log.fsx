@@ -16,14 +16,18 @@ module Log =
         { [<Default("info")>]
           DBT_LOG_LEVEL: LogLevel }
 
-    let private env = Lazy<LogEnv>(fun () -> Env.get<LogEnv> ())
+    let mutable currentLevel = LogLevel.info
 
-    let level () = env.Value.DBT_LOG_LEVEL
+    let private env = Lazy<LogEnv>(fun () -> 
+        let env = Env.get<LogEnv> ()
+        currentLevel <- env.DBT_LOG_LEVEL
+        env
+    )
 
     let output<'a> level fmt =
         Printf.kprintf<unit, 'a>
             (fun str ->
-                if level >= env.Value.DBT_LOG_LEVEL then
+                if level >= currentLevel then
                     printfn "%s" str)
             fmt
 
