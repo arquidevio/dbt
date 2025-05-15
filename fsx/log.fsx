@@ -18,7 +18,11 @@ module Log =
 
     let private env = Lazy<LogEnv>(fun () -> Env.get<LogEnv> ())
 
-    let mutable currentLevel = env.Value.DBT_LOG_LEVEL
+    let mutable private currentLevel = env.Value.DBT_LOG_LEVEL
+
+    let enableTrace(enable:bool) =
+        if enable then
+            currentLevel <- LogLevel.trace
 
     let output<'a> level fmt =
         Printf.kprintf<unit, 'a>
