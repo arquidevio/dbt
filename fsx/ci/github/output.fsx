@@ -23,6 +23,6 @@ module Output =
             if key.Contains "=" then
                 failwithf "Key cannot contain '='"
 
-            File.AppendAllLines(env.Value.GITHUB_OUTPUT, [ $"{key}={value |> Json.write}" ])
+            File.AppendAllLines(env.Value.GITHUB_OUTPUT, [ $"{key}={ planOutput |> value |> Json.write}" ])
 
             planOutput

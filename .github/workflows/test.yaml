@@ -37,6 +37,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         dotnet fsy -v run --force tests/test.fsx
+        dotnet fsy -v run --force tests/test-json.fsx
         dotnet fsy -v run --force tests/ci/test-last-success-sha.fsx
         
         REQUIRED_INT=1 REQUIRED_EXISTS=tt OPTIONAL_EXISTS=XTYh1345 \
