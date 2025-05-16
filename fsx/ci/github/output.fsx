@@ -18,11 +18,15 @@ module Output =
 
         let internal env = Lazy<GithubEnv>(fun () -> Env.get<GithubEnv> ())
 
-        let appendToGithubOutputJson (key: string) (value: PlanOutput -> 'a) (planOutput: PlanOutput) =
+        let appendToGithubOutput (key: string) (value: string) (planOutput: PlanOutput) =
 
             if key.Contains "=" then
                 failwithf "Key cannot contain '='"
 
-            File.AppendAllLines(env.Value.GITHUB_OUTPUT, [ $"{key}={ planOutput |> value |> Json.write}" ])
+            File.AppendAllLines(env.Value.GITHUB_OUTPUT, [ $"{key}={value}" ])
 
             planOutput
+
+        let appendToGithubOutputJson (key: string) (value: PlanOutput -> 'a) (planOutput: PlanOutput) =
+            let jsonVal = planOutput |> value |> Json.write
+            appendToGithubOutput key jsonVal planOutput
