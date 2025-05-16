@@ -131,9 +131,13 @@ module rec PlanBuilder =
         | ProjectId of (ProjectMetadata -> string)
         | ExpandLeafs of (Selector -> string -> string seq)
 
+    type SelectorBuilderDefaults() = class end
+
     [<NoComparison; NoEquality>]
     type SelectorBuilder() =
         inherit Ce.CoreBuilder()
+
+        member _.defaults: SelectorBuilderDefaults = SelectorBuilderDefaults()
 
         [<CustomOperation("id")>]
         member inline _.Id(state, id: string) = [ SelectorId id ] @ state
