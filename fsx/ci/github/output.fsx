@@ -27,6 +27,9 @@ module Output =
 
             planOutput
 
+        let appendToGithubOutputWith (key: string) (value: PlanOutput -> string) (planOutput: PlanOutput) =
+            planOutput |> appendToGithubOutput key (planOutput |> value)
+
         let appendToGithubOutputJson (key: string) (value: PlanOutput -> 'a) (planOutput: PlanOutput) =
             let jsonVal = planOutput |> value |> Json.write
-            appendToGithubOutput key jsonVal planOutput
+            planOutput |> appendToGithubOutput key jsonVal
