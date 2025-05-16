@@ -1,25 +1,12 @@
-#r "paket:
-  nuget Fake.Tools.Git ~> 6.0
-  nuget Fake.Core.Trace ~> 6.0"
+#r "paket: nuget Fake.Tools.Git ~> 6.0"
 
 namespace Arquidev.Dbt
 
-open Fake.Core
+#load "types.fsx"
+#load "log.fsx"
+
 open Fake.Tools.Git
 open System.IO
-
-type GitDiffEnv =
-    { DBT_CURRENT_COMMIT: string option
-      DBT_BASE_COMMIT: string option
-      DBT_MAYBE_TAG: string option }
-
-type DiffResult =
-    { effectiveRange: EffectiveDiffRange
-      dirs: string seq }
-
-and EffectiveDiffRange =
-    { baseCommits: string list
-      currentCommit: string }
 
 [<RequireQualifiedAccess>]
 module GitDiff =
@@ -32,28 +19,23 @@ module GitDiff =
         |> Seq.map (snd >> FileInfo >> (fun f -> Path.GetRelativePath(pwd, f.Directory.FullName)))
         |> Seq.filter ((<>) ".")
 
-    let dirsFromDiff (spec: GitDiffEnv) : DiffResult =
+    let dirsFromDiff (fromRef: string option) (toRef: string option) : DiffResult =
 
-        let currentCommit = spec.DBT_CURRENT_COMMIT |> Option.defaultValue "HEAD"
-        let baseCommit = spec.DBT_BASE_COMMIT
+        let currentCommit = toRef |> Option.defaultWith (fun () -> git pwd "rev-parse HEAD")
+        let baseCommit = fromRef
 
-        Trace.tracefn $"Current revision: %s{currentCommit}"
+        Log.info $"Current revision: %s{currentCommit}"
 
         let baseRefs =
-            match spec.DBT_MAYBE_TAG with
-            | Some currentTag ->
-                Trace.logfn $"Tag: %s{currentTag}"
-                [ git pwd $"describe --abbrev=0 --tags {currentTag}^" ]
-            | None ->
-                match baseCommit with
-                | None
-                | Some "0000000000000000000000000000000000000000" ->
-                    Trace.tracef "Base revisions(s): "
-                    let output = git pwd $$"""show --no-patch --format="%P" {{currentCommit}}"""
-                    output.Split ' ' |> Seq.toList
-                | Some ref ->
-                    Trace.tracefn $"Base revision override: {ref}"
-                    [ ref ]
+            match baseCommit with
+            | None
+            | Some "0000000000000000000000000000000000000000" ->
+                Log.info "Base revisions(s): "
+                let output = git pwd $$"""show --no-patch --format="%P" {{currentCommit}}"""
+                output.Split ' ' |> Seq.toList
+            | Some ref ->
+                Log.info $"Base revision override: {ref}"
+                [ ref ]
 
         let dirs =
             seq {
@@ -67,12 +49,12 @@ module GitDiff =
 
         let info =
             if dirs |> Seq.isEmpty then
-                "No meaningful changes detected"
+                "No relevant changes detected"
             else
                 "Detected git changes in: "
 
-        Trace.tracefn $"%s{info}"
-        dirs |> Seq.iter (Trace.logfn "%s")
+        Log.info $"%s{info}"
+        dirs |> Seq.iter (Log.info "%s")
 
         let dirs =
             dirs
@@ -80,7 +62,7 @@ module GitDiff =
                 if Directory.Exists p then
                     true
                 else
-                    Trace.traceImportantfn $"WARNING: path '%s{p}' no longer exists in the repository. Ignoring."
+                    Log.warn $"WARNING: path '%s{p}' no longer exists in the repository. Ignoring."
                     false)
 
         { dirs = dirs

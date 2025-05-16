@@ -1,8 +1,7 @@
-#r "paket: nuget Fake.Core.Trace ~> 6.0"
-
 namespace Arquidev.Dbt
 
-open Fake.Core
+#load "log.fsx"
+
 open System
 
 [<RequireQualifiedAccess>]
@@ -16,14 +15,14 @@ module Experiment =
         try
             try
                 if isEnabled then
-                    Trace.traceHeader $"EXPERIMENT: {name}"
+                    Log.header $"EXPERIMENT: {name}"
                     experimentFunc () |> Some
                 else
                     None
             with exn ->
-                Trace.traceError "WARN: experiment failed"
-                Trace.traceException exn
+                Log.error "WARN: experiment failed"
+                Log.error "%A" exn
                 None
         finally
             if isEnabled then
-                Trace.traceHeader $"EXPERIMENT END"
+                Log.header $"EXPERIMENT END"
