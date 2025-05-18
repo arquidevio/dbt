@@ -26,13 +26,13 @@ and Profile =
     { id: string
       changeKeyPrefixRegex: (string * string option) option
       postActions: (PlanOutput -> unit) list
-      selectors: Selector list }
+      selector: Selector option }
 
     static member Default =
         { id = "default"
           changeKeyPrefixRegex = None
           postActions = []
-          selectors = [] }
+          selector = None }
 
 [<RequireQualifiedAccess>]
 module Pipeline =
@@ -133,6 +133,43 @@ module rec PlanBuilder =
 
     type SelectorBuilderDefaults() = class end
 
+    let tryGetSelectorId (state: SelectorFacet list) =
+        state
+        |> List.choose (function
+            | SelectorId id -> Some id
+            | _ -> None)
+        |> List.tryExactlyOne
+
+    let flattenSelector (state: SelectorFacet list) : SelectorFacet list =
+        let baseSelector =
+            match
+                state
+                |> List.choose (function
+                    | BaseSelector b -> Some b
+                    | _ -> None)
+            with
+            | [ s ] -> Some s
+            | [] -> None
+            | _ ->
+                Log.trace "%A" state
+                failwithf "extend can be only called once"
+
+        let output =
+
+            match baseSelector with
+            | None -> state
+            | Some baseState ->
+                let baseId = tryGetSelectorId baseState
+                let currentId = tryGetSelectorId state
+
+                match baseId, currentId with
+                | b, c when b = c -> baseState @ state
+                | Some b, None -> baseState @ SelectorId b :: state
+                | _ -> failwithf "Invalid extend config"
+
+        Log.trace "SELECTOR BUILDER RUN: %A -> %A" state output
+        output
+
     [<NoComparison; NoEquality>]
     type SelectorBuilder() =
         inherit Ce.CoreBuilder()
@@ -162,15 +199,13 @@ module rec PlanBuilder =
             [ ExpandLeafs expandLeafs ] @ state
 
         [<CustomOperation("extend")>]
-        member inline _.Extend(state, defaults: SelectorFacet list) = [ BaseSelector defaults ] @ state
+        member inline _.Extend(state, defaults: SelectorFacet list) =
+            let output = [ BaseSelector defaults ] @ state
+            Log.debug "SELECTOR EXTEND: %A -> %A" state output
+            output
 
-        member _.Run(state: SelectorFacet list) : SelectorFacet list =
+        member _.Run(state: SelectorFacet list) : SelectorFacet list = flattenSelector state
 
-            state
-            |> List.collect (fun f ->
-                match f with
-                | BaseSelector x -> x
-                | x -> [ x ])
 
     let makeSelector (state: SelectorFacet list) =
 
@@ -270,22 +305,12 @@ module rec PlanBuilder =
                 | BaseProfile x -> x
                 | x -> [ x ])
 
-    let tryGetSelectorId (state: SelectorFacet list) =
-        state
-        |> List.choose (function
-            | SelectorId id -> Some id
-            | _ -> None)
-        |> List.tryExactlyOne
-
-    let getSelectorId (state: SelectorFacet list) =
-        state |> tryGetSelectorId |> Option.get
-
     let makeProfile (state: ProfileFacet list) =
 
         let revState = state |> List.rev
         let tryPick f = revState |> List.tryPick f
 
-        let selectorId =
+        let profileId =
             state
             |> List.tryPick (function
                 | ProfileId x -> Some x
@@ -303,30 +328,20 @@ module rec PlanBuilder =
                 | PostAction x -> Some x
                 | _ -> None)
 
-        let selectors =
-            
-            let selectorsById =
-                state
-                |> List.choose (function
-                    | Selector sf ->
+        let selectorFacets =
+            state
+            |> List.choose (function
+                | Selector s -> Some s
+                | _ -> None)
+            |> List.collect flattenSelector
+            // |> function
+            //     | [ s ] -> s
+            //     | [] -> failwithf "No selectors defined"
+            //     | xs -> failwith $"Multiple selectors defined: %A{xs}"
 
-                        match sf |> tryGetSelectorId with
-                        | Some _ -> sf
-                        | None -> SelectorId "default" :: sf
-                        |> Some
-
-                    | _ -> None)
-                |> List.groupBy getSelectorId
-            
-            query {
-                for _, xs in selectorsById do
-                let flat = xs |> List.collect id |> makeSelector
-                select flat
-            } |> Seq.toList
-           
         let output =
             Profile.Default
-            |> fun s -> selectorId |> Option.map (fun x -> { s with id = x }) |> Option.defaultValue s
+            |> fun s -> profileId |> Option.map (fun x -> { s with id = x }) |> Option.defaultValue s
             |> fun s ->
                 changeKeyPrefixRegex
                 |> Option.map (fun x -> { s with changeKeyPrefixRegex = Some x })
@@ -336,7 +351,7 @@ module rec PlanBuilder =
                     postActions = s.postActions @ postActions }
             |> fun s ->
                 { s with
-                    selectors = s.selectors @ selectors }
+                    selector = Some(makeSelector selectorFacets) }
 
         Log.trace "Make profile: %A -> %A" state output
         output
@@ -468,11 +483,13 @@ module rec PlanBuilder =
                 | Some p when p |> Map.count > 0 && p.ContainsKey profile -> p[profile]
                 | _ -> failwithf $"Profile {profile} not configured"
 
+            let selector =
+                match profile.selector with
+                | Some s -> s
+                | _ -> failwithf $"No selectors configured"
+
             let result =
-                { requiredProjects =
-                    profile.selectors
-                    |> Seq.collect (Pipeline.findRequiredProjects dirs)
-                    |> Seq.toList
+                { requiredProjects = selector |> Pipeline.findRequiredProjects dirs |> Seq.toList
                   changeSetRange = diffRange
                   changeKeys =
                     diffRange
