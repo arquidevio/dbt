@@ -26,69 +26,6 @@ type ProjectMetadata with
           relativePath = ""
           kind = "" }
 
-// let mergeSelectors =
-//     test "Merge selectors with the same id" {
-//         let plan =
-//             plan {
-//                 profile {
-//                     selector {
-//                         id "test"
-//                         project_id (fun _ -> "hardcoded")
-//                         exclude "delta"
-//                     }
-
-//                     selector {
-//                         id "test"
-//                         exclude "gamma"
-//                     }
-
-//                     selector {
-//                         id "test"
-//                         project_id (fun _ -> "last-wins")
-//                         exclude "zeta"
-//                     }
-//                 }
-//             }
-
-//         let profiles = "Plan should have some profiles" |> Expect.wantSome plan.profiles
-
-//         "Plan should have exactly one profile"
-//         |> Expect.hasCountOf profiles 1u (fun _ -> true)
-
-//         "Plan should contain the default profile"
-//         |> Expect.exists profiles (fun (KeyValue(k, _)) -> k = defaultProfileId)
-
-//         let selector = profiles[defaultProfileId].selector.Value;
-
-//         "Selector id must be 'test'" |> Expect.equal selector.id testSelectorId
-
-//         let projectId = ProjectMetadata.Empty |> selector.projectId
-
-//         "Project id should be from the last selector"
-//         |> Expect.equal projectId "last-wins"
-
-//         let excludes = selector.patternIgnores
-
-//         "Excludes should be merged in the reverse order"
-//         |> Expect.sequenceEqual excludes [ "zeta"; "gamma"; "delta" ]
-//     }
-
-// let mergeDefaultSelectors =
-//     test "Merge default selectors" {
-//         let plan =
-//             plan {
-//                 profile {
-//                     selector { pattern "*.json" }
-//                     selector { pattern "*.yaml" }
-//                 }
-//             }
-
-//         let selector = plan.profiles.Value["default"].selector.Value
-//         "Selector id must be 'default'" |> Expect.equal selector.id defaultSelectorId
-
-//         "Pattern should be *.yaml" |> Expect.equal selector.pattern "*.yaml"
-//     }
-
 let mergeSelectorsExtend =
     test "Merge selectors extend" {
         let baseProfile =
