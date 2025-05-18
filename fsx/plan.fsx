@@ -174,6 +174,7 @@ module rec PlanBuilder =
 
     let makeSelector (state: SelectorFacet list) =
 
+        let originalState = state
         let state = state |> List.rev
         let tryPick f = state |> List.tryPick f
 
@@ -237,7 +238,7 @@ module rec PlanBuilder =
                 |> Option.map (fun x -> { s with expandLeafs = x })
                 |> Option.defaultValue s
 
-        Log.trace "Make selector: %A -> %A" state output
+        Log.trace "Make selector: %A -> %A" originalState output
         output
 
     [<NoComparison; NoEquality>]
@@ -269,13 +270,22 @@ module rec PlanBuilder =
                 | BaseProfile x -> x
                 | x -> [ x ])
 
+    let tryGetSelectorId (state: SelectorFacet list) =
+        state
+        |> List.choose (function
+            | SelectorId id -> Some id
+            | _ -> None)
+        |> List.tryExactlyOne
+
+    let getSelectorId (state: SelectorFacet list) =
+        state |> tryGetSelectorId |> Option.get
 
     let makeProfile (state: ProfileFacet list) =
 
         let revState = state |> List.rev
         let tryPick f = revState |> List.tryPick f
 
-        let id =
+        let selectorId =
             state
             |> List.tryPick (function
                 | ProfileId x -> Some x
@@ -294,15 +304,29 @@ module rec PlanBuilder =
                 | _ -> None)
 
         let selectors =
-            state
-            |> List.choose (function
-                | Selector sf -> Some(sf |> makeSelector)
-                | _ -> None)
+            
+            let selectorsById =
+                state
+                |> List.choose (function
+                    | Selector sf ->
 
+                        match sf |> tryGetSelectorId with
+                        | Some _ -> sf
+                        | None -> SelectorId "default" :: sf
+                        |> Some
 
+                    | _ -> None)
+                |> List.groupBy getSelectorId
+            
+            query {
+                for _, xs in selectorsById do
+                let flat = xs |> List.collect id |> makeSelector
+                select flat
+            } |> Seq.toList
+           
         let output =
             Profile.Default
-            |> fun s -> id |> Option.map (fun x -> { s with id = x }) |> Option.defaultValue s
+            |> fun s -> selectorId |> Option.map (fun x -> { s with id = x }) |> Option.defaultValue s
             |> fun s ->
                 changeKeyPrefixRegex
                 |> Option.map (fun x -> { s with changeKeyPrefixRegex = Some x })
