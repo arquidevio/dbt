@@ -7,6 +7,7 @@ type ProjectMetadata =
       dir: string
       dirSlug: string
       relativePath: string
+      relativeDir: string
       projectId: string
       kind: string }
 
