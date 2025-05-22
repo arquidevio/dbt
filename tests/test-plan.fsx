@@ -24,7 +24,8 @@ type ProjectMetadata with
           dir = ""
           dirSlug = ""
           relativePath = ""
-          kind = "" }
+          kind = ""
+          relativeDir = "" }
 
 let mergeSelectorsExtend =
     test "Merge selectors extend" {
@@ -40,6 +41,7 @@ let mergeSelectorsExtend =
         let plan =
             plan {
                 profile {
+                    include_root_dir true
                     extend baseProfile
                     selector {
                         pattern "*.toml"

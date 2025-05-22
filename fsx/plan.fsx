@@ -24,12 +24,14 @@ and Range =
 
 and Profile =
     { id: string
+      includeRootDir: bool
       changeKeyPrefixRegex: (string * string option) option
       postActions: (PlanOutput -> unit) list
       selector: Selector option }
 
     static member Default =
         { id = "default"
+          includeRootDir = false
           changeKeyPrefixRegex = None
           postActions = []
           selector = None }
@@ -117,6 +119,7 @@ module rec PlanBuilder =
 
     type ProfileFacet =
         | ProfileId of string
+        | IncludeRootDir of bool
         | BaseProfile of ProfileFacet list
         | Selector of SelectorFacet list
         | ChangeKeyRegex of regex: string * replacement: string option
@@ -295,6 +298,10 @@ module rec PlanBuilder =
         [<CustomOperation("id")>]
         member inline _.Id(state, id: string) = [ ProfileId id ] @ state
 
+        [<CustomOperation("include_root_dir")>]
+        member inline _.IncludeRootDir(state, value: bool) = [ IncludeRootDir value ] @ state
+
+
         [<CustomOperation("extend")>]
         member inline _.Extend(state, defaults: ProfileFacet list) = [ BaseProfile defaults ] @ state
 
@@ -308,13 +315,16 @@ module rec PlanBuilder =
 
     let makeProfile (state: ProfileFacet list) =
 
-        let revState = state |> List.rev
-        let tryPick f = revState |> List.tryPick f
-
         let profileId =
             state
             |> List.tryPick (function
                 | ProfileId x -> Some x
+                | _ -> None)
+
+        let includeRootDir =
+            state
+            |> List.tryPick (function
+                | IncludeRootDir x -> Some x
                 | _ -> None)
 
         let changeKeyPrefixRegex =
@@ -335,14 +345,11 @@ module rec PlanBuilder =
                 | Selector s -> Some s
                 | _ -> None)
             |> List.collect flattenSelector
-            // |> function
-            //     | [ s ] -> s
-            //     | [] -> failwithf "No selectors defined"
-            //     | xs -> failwith $"Multiple selectors defined: %A{xs}"
 
         let output =
             Profile.Default
             |> fun s -> profileId |> Option.map (fun x -> { s with id = x }) |> Option.defaultValue s
+            |> fun s -> includeRootDir |> Option.map (fun x -> { s with includeRootDir = x }) |> Option.defaultValue s
             |> fun s ->
                 changeKeyPrefixRegex
                 |> Option.map (fun x -> { s with changeKeyPrefixRegex = Some x })
@@ -460,7 +467,12 @@ module rec PlanBuilder =
             Log.info $"Profile: %s{env.DBT_PROFILE}"
 
             let mode = env.DBT_MODE
-            let profile = env.DBT_PROFILE
+            let profileId = env.DBT_PROFILE
+            let profile =
+                match plan.profiles with
+                | Some p when p |> Map.count > 0 && p.ContainsKey profileId -> p[profileId]
+                | _ -> failwithf $"Profile {profileId} not configured"
+
 
             let dirs, diffRange =
                 match mode with
@@ -469,20 +481,16 @@ module rec PlanBuilder =
 
                     let result =
                         plan.range
-                        |> Option.map (fun r -> r.fromRef, r.toRef)
-                        |> Option.defaultValue ((None, None))
-                        ||> GitDiff.dirsFromDiff
+                        |> Option.map (fun r -> profile.includeRootDir, r.fromRef, r.toRef)
+                        |> Option.defaultValue ((profile.includeRootDir, None, None))
+                        |||> GitDiff.dirsFromDiff
 
                     result.dirs,
                     Some
                         { baseCommits = result.effectiveRange.baseCommits
                           currentCommit = result.effectiveRange.currentCommit }
-                | All -> GitDiff.allDirs (), None
+                | All -> GitDiff.allDirs profile.includeRootDir, None
 
-            let profile =
-                match plan.profiles with
-                | Some p when p |> Map.count > 0 && p.ContainsKey profile -> p[profile]
-                | _ -> failwithf $"Profile {profile} not configured"
 
             let selector =
                 match profile.selector with
