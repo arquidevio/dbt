@@ -108,7 +108,7 @@ module Pipeline =
 
             { output with
                 projectId = config.projectId output })
-        |> Seq.sortBy (fun p -> p.fullPath)
+        |> Seq.sortBy (fun p -> p.projectId)
 
 [<AutoOpen>]
 module rec PlanBuilder =
