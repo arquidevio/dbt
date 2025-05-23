@@ -26,8 +26,9 @@ module DotnetProject =
 [<AutoOpen>]
 module DotnetSelectors =
 
-    type SelectorBuilderDefaults with 
-         member _.dotnet: Selectors = Selectors()
+    type SelectorBuilderDefaults with
+        member _.dotnet: Selectors = Selectors()
+
     and Selectors() =
         member _.generic =
             selector {

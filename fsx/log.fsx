@@ -20,7 +20,7 @@ module Log =
 
     let mutable private currentLevel = env.Value.DBT_LOG_LEVEL
 
-    let enableTrace(enable:bool) =
+    let enableTrace (enable: bool) =
         if enable then
             currentLevel <- LogLevel.trace
 

@@ -8,7 +8,7 @@ namespace Arquidev.Dbt
 module NodeSelectors =
 
     type SelectorBuilderDefaults with
-         member _.node: Selectors = Selectors()
+        member _.node: Selectors = Selectors()
 
     and Selectors() =
         member _.image =

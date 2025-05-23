@@ -108,6 +108,7 @@ module Pipeline =
 
             { output with
                 projectId = config.projectId output })
+        |> Seq.sortBy (fun p -> p.fullPath)
 
 [<AutoOpen>]
 module rec PlanBuilder =
@@ -349,7 +350,10 @@ module rec PlanBuilder =
         let output =
             Profile.Default
             |> fun s -> profileId |> Option.map (fun x -> { s with id = x }) |> Option.defaultValue s
-            |> fun s -> includeRootDir |> Option.map (fun x -> { s with includeRootDir = x }) |> Option.defaultValue s
+            |> fun s ->
+                includeRootDir
+                |> Option.map (fun x -> { s with includeRootDir = x })
+                |> Option.defaultValue s
             |> fun s ->
                 changeKeyPrefixRegex
                 |> Option.map (fun x -> { s with changeKeyPrefixRegex = Some x })
@@ -468,6 +472,7 @@ module rec PlanBuilder =
 
             let mode = env.DBT_MODE
             let profileId = env.DBT_PROFILE
+
             let profile =
                 match plan.profiles with
                 | Some p when p |> Map.count > 0 && p.ContainsKey profileId -> p[profileId]

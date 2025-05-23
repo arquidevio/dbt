@@ -16,7 +16,7 @@ module GitDiff =
 
     let allDirs (includeRootDir: bool) : string seq =
         FileStatus.getAllFiles pwd
-        |> Seq.map (snd >> FileInfo >> fun f -> Path.GetRelativePath(pwd, f.Directory.FullName))
+        |> Seq.map (snd >> FileInfo >> (fun f -> Path.GetRelativePath(pwd, f.Directory.FullName)))
         |> fun xs -> if includeRootDir then xs else xs |> Seq.filter ((<>) ".")
 
     let dirsFromDiff (includeRootDir: bool) (fromRef: string option) (toRef: string option) : DiffResult =
@@ -42,8 +42,12 @@ module GitDiff =
                 for baseRef in baseRefs do
                     yield!
                         FileStatus.getChangedFiles pwd currentCommit baseRef
-                        |> Seq.map (snd >> FileInfo >> fun f -> Path.GetRelativePath(pwd, f.Directory.FullName))
-                        |> fun paths -> if includeRootDir then paths else paths |> Seq.filter ((<>) ".")
+                        |> Seq.map (snd >> FileInfo >> (fun f -> Path.GetRelativePath(pwd, f.Directory.FullName)))
+                        |> fun paths ->
+                            if includeRootDir then
+                                paths
+                            else
+                                paths |> Seq.filter ((<>) ".")
             }
             |> Seq.distinct
 

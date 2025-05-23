@@ -43,6 +43,7 @@ let mergeSelectorsExtend =
                 profile {
                     include_root_dir true
                     extend baseProfile
+
                     selector {
                         pattern "*.toml"
                         exclude "blue"
@@ -59,9 +60,7 @@ let mergeSelectorsExtend =
     }
 
 [<Tests>]
-let tests =
-    [ mergeSelectorsExtend ]
-    |> testList "Plan builder"
+let tests = [ mergeSelectorsExtend ] |> testList "Plan builder"
 
 
 runTestsWithCLIArgs [] [||] tests
