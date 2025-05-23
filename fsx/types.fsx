@@ -1,35 +1,54 @@
 namespace Arquidev.Dbt
 
-open System.IO
+type ProjectMetadata =
+    { fileName: string
+      fullPath: string
+      fullDir: string
+      dir: string
+      dirSlug: string
+      relativePath: string
+      relativeDir: string
+      projectId: string
+      kind: string }
+
+    member x.IdTupleBy([<System.ParamArray>] c: char array) =
+        let chunks = x.projectId.Split(c, 2)
+        chunks[0], chunks[1]
+
+    member x.IdTripleBy([<System.ParamArray>] c: char array) =
+        let chunks = x.projectId.Split(c, 3)
+        chunks[0], chunks[1], chunks[2]
 
 type Selector =
-    { kind: string
+    { id: string
       pattern: string
       patternIgnores: string list
       isRequired: string -> bool
       isIgnored: string -> bool
-      safeName: string -> string
+      projectId: ProjectMetadata -> string
       expandLeafs: Selector -> string -> string seq }
 
     static member internal Default =
-        { kind = "none"
+        { id = "none"
           pattern = "none"
           patternIgnores = []
           isIgnored = fun _ -> false
           isRequired = fun _ -> true
-          safeName =
-            fun path ->
-                path
-                |> Path.GetDirectoryName
-                |> Path.GetFileName
-                |> fun p -> p.ToLowerInvariant().Replace(".", "-")
+          projectId = fun p -> p.projectId
           expandLeafs = fun _ path -> Seq.singleton path }
 
-type ProjectPath =
-    { path: string
-      dir: string
-      safeName: string
-      kind: string }
+type ChangeSetRange =
+    { baseCommits: string list
+      currentCommit: string }
+
+type PlanOutput =
+    { requiredProjects: ProjectMetadata list
+      changeKeys: string list option
+      changeSetRange: ChangeSetRange option }
+
+type DiffResult =
+    { effectiveRange: ChangeSetRange
+      dirs: string seq }
 
 type BuildSpec = { docker: DockerBuildSpec list }
 
