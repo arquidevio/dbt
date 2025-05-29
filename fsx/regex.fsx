@@ -12,3 +12,9 @@ module Regex =
             Some(List.tail [ for x in m.Groups -> x.Value ])
         else
             None
+
+    [<RequireQualifiedAccess>]
+    module Regex =
+        /// Checks if the input string matches the pattern. Pattern gets wrapped in ^$
+        let isMatchSafe (input: string) (pattern: string) =
+            Regex.IsMatch(input, $"^{pattern.Trim('^').TrimEnd '$'}$")

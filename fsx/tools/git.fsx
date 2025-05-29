@@ -6,7 +6,6 @@
 
 namespace Arquidev.Dbt
 
-open Regex
 open Fake.Core
 open Fake.Tools
 
