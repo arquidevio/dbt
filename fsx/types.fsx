@@ -65,7 +65,8 @@ and DockerBuildSpec =
           target = None }
 
 type UpdateSpec =
-    { environment: string
+    { source_repo: string
+      source_branch: string
       new_tag: string
       version: int64
       change_keys: string list option
