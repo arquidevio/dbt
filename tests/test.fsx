@@ -9,4 +9,4 @@
 
 open Arquidev.Dbt
 
-GitDiff.dirsFromDiff false (Some "HEAD^1") (Some "HEAD")
+GitDiff.dirsFromDiff false (Some "HEAD^^^") (Some "HEAD")
