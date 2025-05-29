@@ -7,6 +7,8 @@
 
 namespace Arquidev.Dbt
 
+#load "../log.fsx"
+
 open Fake.Core
 open Ionide.ProjInfo.InspectSln
 open System.Xml.XPath
@@ -59,17 +61,17 @@ module Solution =
         let getProjReferenceDeps (projPath: string) : HashSet<string> =
 
             let resolveFullPath (relativePath: string) =
-                Path.GetFullPath(Path.Combine(Path.GetDirectoryName(projPath), relativePath.Replace("\\", "/")))
+                Path.GetFullPath(Path.Combine(Path.GetDirectoryName projPath, relativePath.Replace("\\", "/")))
 
-            let xp = XPathDocument(projPath)
+            let xp = XPathDocument projPath
             let n = xp.CreateNavigator()
-            let references = n.Select("//ProjectReference")
+            let references = n.Select "//ProjectReference"
             let mutable projectReferences = HashSet<string>()
 
             while references.MoveNext() do
 
                 let referenceVal =
-                    match references.Current.SelectSingleNode("@Include") with
+                    match references.Current.SelectSingleNode "@Include" with
                     | null -> references.Current.SelectSingleNode("Include").Value
                     | v -> v.Value
 
@@ -90,7 +92,7 @@ module Solution =
         |> List.collect projs
         |> Seq.collect id
         |> Seq.groupBy fst
-        |> Seq.map (fun (k, g) -> (k, g |> Seq.map snd |> Seq.toList))
+        |> Seq.map (fun (k, g) -> k, g |> Seq.map snd |> Seq.toList)
         |> dict
 
     let findLeafDependants
@@ -106,8 +108,10 @@ module Solution =
 
         find [] projectPath |> Seq.distinct
 
-    let generateRestoreList (slnPath: string) : unit =
-        let slnDir = Path.GetDirectoryName slnPath
+    let generateRestoreList (slnDir: string) : unit =
+        Log.header "RESTORE LIST"
+        let slnPath = findInDir slnDir
+        Log.debug $"Solution: {slnPath}"
         let originalPwd = Directory.GetCurrentDirectory()
 
         try
@@ -129,7 +133,7 @@ module Solution =
                 |> Proc.start
 
             findProjects (fun _ -> true) slnPath
-            |> Seq.map (fun path -> path.Replace(slnDir, String.Empty).Trim('/'))
+            |> Seq.map (fun path -> path.Replace(slnDir, String.Empty).Trim '/')
             |> Seq.iter (fun path -> input.Value.Write(Text.Encoding.UTF8.GetBytes(path + Environment.NewLine)))
 
             input.Value.Flush()
