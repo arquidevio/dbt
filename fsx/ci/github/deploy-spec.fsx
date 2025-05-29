@@ -10,7 +10,9 @@ module GitHubDeploymentSpec =
     module Plan =
 
         type BuildEnv =
-            { [<Default("development")>]
+            { [<Default("invalid")>]
+              GITHUB_REPOSITORY: string
+              [<Default("development")>]
               GITHUB_REF_NAME: string
               [<Default("00000000")>]
               GITHUB_SHA: string
@@ -23,12 +25,8 @@ module GitHubDeploymentSpec =
 
             let env = Env.get<BuildEnv> ()
 
-            { environment =
-                match env.GITHUB_REF_NAME with
-                | "main" -> "prod"
-                | "development" -> "dev"
-                | b when b.StartsWith "test-" -> "dev"
-                | b -> failwithf $"Branch is not supported: %s{b}"
+            { source_repo = env.GITHUB_REPOSITORY
+              source_branch = env.GITHUB_REF_NAME
               new_tag = env.GITHUB_SHA_SHORT
               version = env.GITHUB_RUN_ID
               change_keys = planOutput.changeKeys
