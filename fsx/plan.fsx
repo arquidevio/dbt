@@ -1,6 +1,4 @@
-#if !INTERACTIVE
 namespace Arquidev.Dbt
-#endif
 
 #load "types.fsx"
 #load "env.fsx"

@@ -18,7 +18,7 @@ Prerequisites
 Pre-load an fsi session with `fsx/plan.fsx`: 
 
 ```bash
-dotnet fsi --compilertool:$(echo ~/.fsharp/fsx-extensions/.fsch) --use:./fsx/plan.fsx
+dotnet fsi --compilertool:$(echo ~/.fsharp/fsx-extensions/.fsch) --use:./.fsi/plan.fsx
 ```
 
 Create and evaluate a plan:
