@@ -1,9 +1,11 @@
+#if !INTERACTIVE
 namespace Arquidev.Dbt
+#endif
 
 #load "types.fsx"
 #load "env.fsx"
 #load "log.fsx"
-#load "git.fsx"
+#load "git-diff.fsx"
 #load "tools/git.fsx"
 #load "ci/github/last-success-sha.fsx"
 #load "ce.fsx"
