@@ -18,11 +18,7 @@ Prerequisites
 ### Running fsi
 
 ```bash
-dotnet fsi --compilertool:$(echo ~/.fsharp/fsx-extensions/.fsch) --load:./fsx/plan.fsx
-```
-
-```fsharp
-open Plan;;
+dotnet fsi --compilertool:$(echo ~/.fsharp/fsx-extensions/.fsch) --use:./fsx/plan.fsx
 ```
 
 Create and evaluate a plan

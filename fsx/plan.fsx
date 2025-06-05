@@ -523,8 +523,9 @@ module rec PlanBuilder =
 
             if result.requiredProjects.Length = 0 then
                 Log.info "No project changes. Exiting"
+#if !INTERACTIVE
                 exit 0
-
+#endif
             for action in profile.postActions do
                 action result
 
