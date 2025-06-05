@@ -15,13 +15,13 @@ Prerequisites
 1. Install `fsy`: `dotnet tool install --global fsy`
 2. Install the `paket` manager files via: `fsy install-fsx-extensions` (it copies it to: `~/.fsharp/fsx-extensions/.fsch`)
 
-### Running fsi
+Pre-load an fsi session with `fsx/plan.fsx`: 
 
 ```bash
 dotnet fsi --compilertool:$(echo ~/.fsharp/fsx-extensions/.fsch) --use:./fsx/plan.fsx
 ```
 
-Create and evaluate a plan
+Create and evaluate a plan:
 
 ```fsharp
 plan {
