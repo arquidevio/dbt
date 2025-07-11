@@ -121,11 +121,7 @@ module Solution =
             let tar =
                 CreateProcess.fromRawCommand
                     "tar"
-                    [ "--sort=name"
-                      "--owner=root:0"
-                      "--group=root:0"
-                      "--mtime=2023-01-01 00:00:00"
-                      "-czvf"
+                    [ "-czvf"
                       Path.Combine(slnDir, "restore-list.tar.gz")
                       "-T"
                       "-" ]
@@ -134,6 +130,7 @@ module Solution =
 
             findProjects (fun _ -> true) slnPath
             |> Seq.map (fun path -> path.Replace(slnDir, String.Empty).Trim '/')
+            |> Seq.sort
             |> Seq.iter (fun path -> input.Value.Write(Text.Encoding.UTF8.GetBytes(path + Environment.NewLine)))
 
             input.Value.Flush()
