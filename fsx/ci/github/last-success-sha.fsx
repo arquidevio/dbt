@@ -1,9 +1,9 @@
 #load "../../env.fsx"
-#r "paket: nuget FsHttp ~> 15"
+#r "paket: nuget Arquidev.Fetch ~> 1.1.1"
 
 namespace Arquidev.Dbt
 
-open FsHttp
+open Arquidev.Fetch
 
 type Step = { conclusion: string option }
 
@@ -74,38 +74,38 @@ module LastSuccessSha =
                            GITHUB_WORKFLOW_REF: string |}
                      > ()
 
-                let gh =
-                    http {
+                let withGhHeaders =
+                    rq {
                         Authorization $"token {env.GITHUB_TOKEN}"
                         Accept "application/vnd.github+json"
-                        UserAgent "FsHttp"
+                        UserAgent "Arquidev.Fetch"
                     }
 
                 let workflowRuns () =
                     let workflowId =
                         env.GITHUB_WORKFLOW_REF.Split "@" |> Seq.head |> _.Split("/") |> Seq.last
 
-                    gh {
+                    fetch<{| workflow_runs: WorkflowRun list |}> {
                         GET
                             $"""https://api.github.com/repos/{env.GITHUB_REPOSITORY}/actions/workflows/{workflowId}/runs?status=success&branch={env.GITHUB_REF_NAME}&page=1&per_page=10"""
+
+                        withGhHeaders
                     }
-                    |> Request.send
-                    |> Response.assertOk
-                    |> Response.deserializeJson<{| workflow_runs: WorkflowRun list |}>
                     |> _.workflow_runs
 
                 let workflowRunJobs (runId: int64) =
-                    gh { GET $"https://api.github.com/repos/{env.GITHUB_REPOSITORY}/actions/runs/{runId}/jobs" }
-                    |> Request.send
-                    |> Response.deserializeJson<{| jobs: Job list |}>
+                    fetch<{| jobs: Job list |}> {
+                        GET $"https://api.github.com/repos/{env.GITHUB_REPOSITORY}/actions/runs/{runId}/jobs"
+                        withGhHeaders
+                    }
                     |> _.jobs
 
                 try
-                    Fsi.enableDebugLogs ()
+                    Fetch.enableLogs ()
                     let result = logic workflowRuns workflowRunJobs
                     result
                 finally
-                    Fsi.disableDebugLogs ()
+                    Fetch.disableLogs ()
 
         printfn $"Last success sha: %A{result}"
         result
