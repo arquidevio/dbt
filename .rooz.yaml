@@ -3,4 +3,7 @@ extra_repos:
 image: ghcr.io/queil/image:dotnet-8
 caches: 
 - ~/.nuget
-
+shell:
+- sh
+- -c
+- zellij --session rooz || zellij attach rooz

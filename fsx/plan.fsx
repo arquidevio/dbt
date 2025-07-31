@@ -3,7 +3,7 @@ namespace Arquidev.Dbt
 #load "types.fsx"
 #load "env.fsx"
 #load "log.fsx"
-#load "git.fsx"
+#load "git-diff.fsx"
 #load "tools/git.fsx"
 #load "ci/github/last-success-sha.fsx"
 #load "ce.fsx"
@@ -521,8 +521,9 @@ module rec PlanBuilder =
 
             if result.requiredProjects.Length = 0 then
                 Log.info "No project changes. Exiting"
+#if !INTERACTIVE
                 exit 0
-
+#endif
             for action in profile.postActions do
                 action result
 
