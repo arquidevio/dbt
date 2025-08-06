@@ -69,12 +69,12 @@ module Pipeline =
 
         findParentProj originPath
 
-    let findRequiredProjects (dirPaths: string seq) (config: Selector) =
+    let findRequiredProjects (dirPaths: string seq) (allFiles: string seq) (config: Selector) =
 
         dirPaths
         |> Seq.choose (findParentProjectPath config.pattern config.patternIgnores)
         |> Seq.distinct
-        |> Seq.collect (config.expandLeafs config)
+        |> Seq.collect (config.expandLeafs config allFiles)
         |> Seq.distinct
         |> Seq.filter (not << config.isIgnored)
         |> fun paths ->
@@ -134,7 +134,7 @@ module rec PlanBuilder =
         | RequiredWhen of (string -> bool)
         | IgnoredWhen of (string -> bool)
         | ProjectId of (ProjectMetadata -> string)
-        | ExpandLeafs of (Selector -> string -> string seq)
+        | ExpandLeafs of (Selector -> string seq -> string -> string seq)
 
     type SelectorBuilderDefaults() = class end
 
@@ -200,7 +200,7 @@ module rec PlanBuilder =
         member inline _.ProjectId(state, projectId: ProjectMetadata -> string) = [ ProjectId projectId ] @ state
 
         [<CustomOperation("expand_leafs")>]
-        member inline _.ExpandLeafs(state, expandLeafs: Selector -> string -> string seq) =
+        member inline _.ExpandLeafs(state, expandLeafs: Selector -> string seq -> string -> string seq) =
             [ ExpandLeafs expandLeafs ] @ state
 
         [<CustomOperation("extend")>]
@@ -479,7 +479,7 @@ module rec PlanBuilder =
                 | _ -> failwithf $"Profile {profileId} not configured"
 
 
-            let dirs, diffRange =
+            let dirs, diffRange, allFiles =
                 match mode with
                 | Diff ->
                     Log.header "GIT CHANGE SET"
@@ -493,8 +493,9 @@ module rec PlanBuilder =
                     result.dirs,
                     Some
                         { baseCommits = result.effectiveRange.baseCommits
-                          currentCommit = result.effectiveRange.currentCommit }
-                | All -> GitDiff.allDirs profile.includeRootDir, None
+                          currentCommit = result.effectiveRange.currentCommit },
+                    result.allFiles
+                | All -> GitDiff.allDirs profile.includeRootDir, None, []
 
 
             let selector =
@@ -503,7 +504,7 @@ module rec PlanBuilder =
                 | _ -> failwithf $"No selectors configured"
 
             let result =
-                { requiredProjects = selector |> Pipeline.findRequiredProjects dirs |> Seq.toList
+                { requiredProjects = selector |> Pipeline.findRequiredProjects dirs allFiles |> Seq.toList
                   changeSetRange = diffRange
                   changeKeys =
                     diffRange
