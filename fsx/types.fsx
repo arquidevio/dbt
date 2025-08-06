@@ -26,7 +26,7 @@ type Selector =
       isRequired: string -> bool
       isIgnored: string -> bool
       projectId: ProjectMetadata -> string
-      expandLeafs: Selector -> string -> string seq }
+      expandLeafs: Selector -> string seq -> string -> string seq }
 
     static member internal Default =
         { id = "none"
@@ -35,7 +35,7 @@ type Selector =
           isIgnored = fun _ -> false
           isRequired = fun _ -> true
           projectId = fun p -> p.projectId
-          expandLeafs = fun _ path -> Seq.singleton path }
+          expandLeafs = fun _ _ path -> Seq.singleton path }
 
 type ChangeSetRange =
     { baseCommits: string list
@@ -48,7 +48,8 @@ type PlanOutput =
 
 type DiffResult =
     { effectiveRange: ChangeSetRange
-      dirs: string seq }
+      dirs: string seq
+      allFiles: string seq }
 
 type BuildSpec = { docker: DockerBuildSpec list }
 

@@ -37,19 +37,25 @@ module GitDiff =
                 Log.info $"Base revision override: {ref}"
                 [ ref ]
 
-        let dirs =
+        let allFiles =
             seq {
                 for baseRef in baseRefs do
                     yield!
                         FileStatus.getChangedFiles pwd currentCommit baseRef
-                        |> Seq.map (snd >> FileInfo >> (fun f -> Path.GetRelativePath(pwd, f.Directory.FullName)))
-                        |> fun paths ->
-                            if includeRootDir then
-                                paths
-                            else
-                                paths |> Seq.filter ((<>) ".")
+                        |> Seq.map (snd >> FileInfo)
             }
+
+        let dirs =
+            allFiles
+            |> Seq.map (fun f -> Path.GetRelativePath(pwd, f.Directory.FullName))
+            |> fun paths ->
+                if includeRootDir then
+                    paths
+                else
+                    paths |> Seq.filter ((<>) ".")
+
             |> Seq.distinct
+
 
         let info =
             if dirs |> Seq.isEmpty then
@@ -70,6 +76,7 @@ module GitDiff =
                     false)
 
         { dirs = dirs
+          allFiles = allFiles |> Seq.map _.FullName
           effectiveRange =
             { baseCommits = baseRefs
               currentCommit = currentCommit } }
