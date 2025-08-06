@@ -48,7 +48,7 @@ type PlanOutput =
 
 type DiffResult =
     { effectiveRange: ChangeSetRange
-      dirs: string seq 
+      dirs: string seq
       allFiles: string seq }
 
 type BuildSpec = { docker: DockerBuildSpec list }
