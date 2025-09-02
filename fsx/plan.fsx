@@ -77,6 +77,7 @@ module Pipeline =
         |> Seq.collect (config.expandLeafs config)
         |> Seq.distinct
         |> Seq.filter (not << config.isIgnored)
+        |> Seq.toList
         |> fun paths ->
             let neitherIgnoredNorRequired =
                 paths |> Seq.except (paths |> Seq.filter config.isRequired)
