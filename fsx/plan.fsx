@@ -60,7 +60,7 @@ module Pipeline =
                 |> Seq.map (fun path ->
                     Log.debug "%sPATH: %s" (String(' ', depth * 2)) path
                     path)
-                |> Seq.filter (fun path -> Regex.isMatchSafe path projectPattern)
+                |> Seq.filter (fun path -> Regex.IsMatch(path, projectPattern))
                 |> Seq.map (fun path ->
                     Log.debug "%s  >>> PROJECT FOUND: %s <<<" (String(' ', depth * 2)) path
                     path)
