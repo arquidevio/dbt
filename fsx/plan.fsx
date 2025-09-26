@@ -8,7 +8,10 @@ namespace Arquidev.Dbt
 #load "ci/github/last-success-sha.fsx"
 #load "ce.fsx"
 
+#r "paket: nuget Microsoft.Extensions.FileSystemGlobbing ~> 9"
+
 open Arquidev.Dbt
+open Microsoft.Extensions.FileSystemGlobbing
 
 type Plan =
     { profiles: Map<string, Profile> option
@@ -38,81 +41,91 @@ and Profile =
 
 [<RequireQualifiedAccess>]
 module Pipeline =
-    open System
     open System.IO
-    open System.Text.RegularExpressions
+
+    [<Literal>]
+    let private NoProject = "(none)"
 
     /// Find the closest ancestor dir of the originPath that contains a single file matching projectPattern
     let findParentProjectPath
         (rootDir: string)
-        (projectPattern: string)
-        (projectExtension: string)
-        (patternIgnores: string list)
+        (projectMatcher: Matcher)
+        (includeRootDir: bool)
         (originPath: string)
         : string option =
 
-        Log.debug "origin path: %s" originPath
+        let rec findParentProj (path: string) =
 
-        let rec findParentProj (p: string) (depth: int) =
-            match
-                Directory.EnumerateFiles(p, projectExtension)
-                |> Seq.map (fun p -> Path.GetRelativePath(rootDir, p))
-                |> Seq.map (fun path ->
-                    Log.debug "%sPATH: %s" (String(' ', depth * 2)) path
-                    path)
-                |> Seq.filter (fun path -> Regex.IsMatch(path, projectPattern))
-                |> Seq.map (fun path ->
-                    Log.debug "%s  >>> PROJECT FOUND: %s <<<" (String(' ', depth * 2)) path
-                    path)
-                |> Seq.filter (fun path ->
-                    patternIgnores
-                    |> Seq.exists (fun pattern -> Regex.IsMatch(path, pattern))
-                    |> not)
-                |> Seq.tryExactlyOne
-            with
-            | None ->
-                match Directory.GetParent p with
+            match projectMatcher.GetResultsInFullPath path |> Seq.toList with
+            | [] ->
+                match Directory.GetParent path with
                 | null -> None
-                | p -> findParentProj p.FullName (depth + 1)
-            | Some proj -> Some(proj |> Path.GetFullPath)
+                | p when not includeRootDir && p.FullName = rootDir -> None
+                | p -> findParentProj p.FullName
+            | [ proj ] -> Some(proj |> Path.GetFullPath)
+            | _ -> failwithf "Multiple project matches"
 
-        findParentProj originPath 0
+        findParentProj originPath
 
-    let findRequiredProjects (rootDir: string) (dirPaths: string seq) (config: Selector) =
+    let findRequiredProjects (dirPaths: string seq) (includeRootDir: bool) (selector: Selector) =
 
-        Log.debug "pattern: %s" config.pattern
-        Log.debug "exclude: %A" config.patternIgnores
+        let discoveryRoot =
+            let cwd = Directory.GetCurrentDirectory()
 
-        let projectExtension =
-            let splitAt = config.pattern.LastIndexOf '.' + 1
-            $"*.{config.pattern[splitAt..]}"
+            selector.discoveryRoot
+            |> Option.map (fun path -> Path.Combine(cwd, path))
+            |> Option.defaultValue cwd
 
-        Log.debug "extension: %s" projectExtension
+        Log.debug "discovery root: %s" discoveryRoot
+        Log.debug "pattern: %s" selector.pattern
+        Log.debug "exclude: %A" selector.excludePatterns
+
+        let dirsPreFilter = Matcher()
+        dirsPreFilter.AddInclude("**/*.*").AddExcludePatterns selector.excludePatterns
+
+        let projectMatcher = Matcher()
+        projectMatcher.AddInclude selector.pattern |> ignore
 
         dirPaths
-        |> Seq.choose (findParentProjectPath rootDir config.pattern projectExtension config.patternIgnores)
+        |> dirsPreFilter.Match
+        |> _.Files
+        |> Seq.map _.Path
+        |> Seq.groupBy (fun dir ->
+            let parentProjectPath =
+                dir |> findParentProjectPath discoveryRoot projectMatcher includeRootDir
+
+            match parentProjectPath with
+            | Some p -> p
+            | None -> NoProject)
+        |> Seq.choose (fun (projectPath, dirs) ->
+            Log.debug "Project: '%s'" projectPath
+            dirs |> Seq.iter (Log.debug " - %s")
+
+            match projectPath with
+            | NoProject -> None
+            | s -> Some s)
         |> Seq.distinct
-        |> Seq.collect (config.expandLeafs config)
+        |> Seq.collect (selector.expandLeafs selector)
         |> Seq.distinct
-        |> Seq.filter (not << config.isIgnored)
+        |> Seq.filter (not << selector.isIgnored)
         |> Seq.toList
         |> fun paths ->
             let neitherIgnoredNorRequired =
-                paths |> Seq.except (paths |> Seq.filter config.isRequired)
+                paths |> Seq.except (paths |> Seq.filter selector.isRequired)
 
             for path in neitherIgnoredNorRequired do
                 Log.warn
                     $"WARNING: %s{path} is a leaf project not matching the inclusion criteria. The project will be ignored."
 
             paths
-        |> Seq.filter config.isRequired
+        |> Seq.filter selector.isRequired
         |> Seq.map (fun p ->
             let file = FileInfo p
             let cwd = Directory.GetCurrentDirectory()
             let relativeDir = Path.GetRelativePath(cwd, file.DirectoryName)
 
             let output =
-                { kind = config.id
+                { kind = selector.id
                   fileName = file.Name
                   fullPath = p
                   fullDir = file.DirectoryName
@@ -126,7 +139,7 @@ module Pipeline =
                     |> fun p -> p.Split [| '.'; '_' |] |> String.concat "-" }
 
             { output with
-                projectId = config.projectId output })
+                projectId = selector.projectId output })
         |> Seq.sortBy (fun p -> p.projectId)
 
 [<AutoOpen>]
@@ -203,25 +216,75 @@ module rec PlanBuilder =
         [<CustomOperation("id")>]
         member inline _.Id(state, id: string) = [ SelectorId id ] @ state
 
+        /// <summary>
+        /// Glob pattern for matching project files
+        /// </summary>
+        /// <example>
+        /// <code>
+        /// selector {
+        ///     pattern "*.fsproj"
+        /// }
+        /// </code>
+        /// </example>
         [<CustomOperation("pattern")>]
         member inline _.Pattern(state, pattern: string) = [ Pattern pattern ] @ state
 
+        /// <summary>
+        /// Glob exclusion patterns to pre-filter the unique dirs from the git change set
+        /// </summary>
+        /// <remarks>
+        /// * Patterns are relative to the current working dir
+        /// * Use multiple times to define multiple excludes
+        /// </remarks>
+        /// <example>
+        /// <code>
+        /// selector {
+        ///     exclude "subdirectory"
+        ///     exclude "other-dir/subdir"
+        /// }
+        /// </code>
+        /// </example>
         [<CustomOperation("exclude")>]
         member inline _.Exclude(state, exclude: string) = [ Exclude exclude ] @ state
 
+        /// <summary>
+        /// Determines if a detected project is required
+        /// </summary>
+        /// <remarks>
+        /// Default: true
+        /// </remarks>
         [<CustomOperation("required_when")>]
         member inline _.RequiredWhen(state, isRequired: string -> bool) = [ RequiredWhen isRequired ] @ state
 
+        /// <summary>
+        /// Determines if a detected project should be ignored
+        /// </summary>
+        /// <remarks>
+        /// Default: false
+        /// </remarks>
         [<CustomOperation("ignored_when")>]
         member inline _.IgnoredWhen(state, isIgnored: string -> bool) = [ IgnoredWhen isIgnored ] @ state
 
+        /// <summary>
+        /// Overrides the default project id generation function
+        /// </summary
         [<CustomOperation("project_id")>]
         member inline _.ProjectId(state, projectId: ProjectMetadata -> string) = [ ProjectId projectId ] @ state
 
+        /// <summary>
+        /// Determines if/how to traverse dependency tree to determine the leaf projects
+        /// </summary>
+        /// <remarks>
+        /// * The default strategy is no dependency traversal
+        /// * Some built-in selectors, like the dotnet selector have a strategy implemented
+        /// </remarks>
         [<CustomOperation("expand_leafs")>]
         member inline _.ExpandLeafs(state, expandLeafs: Selector -> string -> string seq) =
             [ ExpandLeafs expandLeafs ] @ state
 
+        /// <summary>
+        /// Can be used to extend and customize an already existing selector (e.g. a built-in one)
+        /// </summary>
         [<CustomOperation("extend")>]
         member inline _.Extend(state, defaults: SelectorFacet list) =
             let output = [ BaseSelector defaults ] @ state
@@ -279,7 +342,7 @@ module rec PlanBuilder =
             |> fun s -> pattern |> Option.map (fun x -> { s with pattern = x }) |> Option.defaultValue s
             |> fun s ->
                 { s with
-                    patternIgnores = s.patternIgnores @ excludes }
+                    excludePatterns = s.excludePatterns @ excludes }
             |> fun s ->
                 requiredWhen
                 |> Option.map (fun x -> { s with isRequired = x })
@@ -522,9 +585,7 @@ module rec PlanBuilder =
                 | _ -> failwithf $"No selectors configured"
 
             let result =
-                { requiredProjects =
-                    Pipeline.findRequiredProjects (System.IO.Directory.GetCurrentDirectory()) dirs selector
-                    |> Seq.toList
+                { requiredProjects = Pipeline.findRequiredProjects dirs profile.includeRootDir selector |> Seq.toList
                   changeSetRange = diffRange
                   changeKeys =
                     diffRange
