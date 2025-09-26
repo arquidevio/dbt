@@ -50,13 +50,20 @@ module Pipeline =
     let findParentProjectPath
         (rootDir: string)
         (projectMatcher: Matcher)
+        (projectExcludeMatcher: Matcher)
         (includeRootDir: bool)
         (originPath: string)
         : string option =
 
         let rec findParentProj (path: string) =
 
-            match projectMatcher.GetResultsInFullPath path |> Seq.toList with
+            match
+                projectMatcher.GetResultsInFullPath path
+                |> projectExcludeMatcher.Match
+                |> _.Files
+                |> Seq.map _.Path
+                |> Seq.toList
+            with
             | [] ->
                 match Directory.GetParent path with
                 | null -> None
@@ -80,14 +87,14 @@ module Pipeline =
         Log.debug "pattern: %s" selector.pattern
         Log.debug "exclude: %A" selector.excludePatterns
 
-        let dirsPreFilter = Matcher()
-        dirsPreFilter.AddInclude("**/*.*").AddExcludePatterns selector.excludePatterns
-
-        let projectMatcher = Matcher()
-        projectMatcher.AddInclude selector.pattern |> ignore
-
         let findParentProjects =
-            let findParent = findParentProjectPath discoveryRoot projectMatcher includeRootDir
+            let projectMatcher = Matcher()
+            projectMatcher.AddInclude selector.pattern |> ignore
+            let projectExcludeMatcher = Matcher()
+            projectExcludeMatcher.AddInclude("**/*.*").AddExcludePatterns selector.excludePatterns
+
+            let findParent =
+                findParentProjectPath discoveryRoot projectMatcher projectExcludeMatcher includeRootDir
 
             if Log.debugEnabled () then
                 let logGroups groups =
@@ -102,9 +109,6 @@ module Pipeline =
                 Seq.choose findParent
 
         dirPaths
-        |> dirsPreFilter.Match
-        |> _.Files
-        |> Seq.map _.Path
         |> findParentProjects
         |> Seq.distinct
         |> Seq.collect (selector.expandLeafs selector)
@@ -232,7 +236,7 @@ module rec PlanBuilder =
         member inline _.Pattern(state, pattern: string) = [ Pattern pattern ] @ state
 
         /// <summary>
-        /// Glob exclusion patterns to pre-filter the unique dirs from the git change set
+        /// Glob exclusion patterns to filter out unwanted projects discovered by the selector pattern
         /// </summary>
         /// <remarks>
         /// * Patterns are relative to the current working dir
