@@ -54,7 +54,8 @@ module Pipeline =
 
             match
                 Directory.EnumerateFiles(p, patternFile)
-                |> Seq.filter _.StartsWith(patternDir)
+                |> Seq.filter (fun path -> Regex.IsMatch(path, $"^{patternDir}.*"))
+                |> Seq.map(fun path -> Log.trace "MATCH: %s" path; path)
                 |> Seq.filter (fun path ->
                     patternIgnores
                     |> Seq.exists (fun pattern -> Regex.IsMatch(path, pattern))
