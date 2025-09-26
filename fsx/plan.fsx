@@ -86,24 +86,26 @@ module Pipeline =
         let projectMatcher = Matcher()
         projectMatcher.AddInclude selector.pattern |> ignore
 
+        let findParentProjects =
+            let findParent = findParentProjectPath discoveryRoot projectMatcher includeRootDir
+
+            if Log.debugEnabled () then
+                let logGroups groups =
+                    for parentProject, dirs in groups do
+                        Log.debug "Project: '%s'" (parentProject |> Option.defaultValue NoProject)
+                        dirs |> Seq.iter (Log.debug " - %s")
+
+                    groups
+
+                Seq.groupBy findParent >> logGroups >> Seq.choose fst
+            else
+                Seq.choose findParent
+
         dirPaths
         |> dirsPreFilter.Match
         |> _.Files
         |> Seq.map _.Path
-        |> Seq.groupBy (fun dir ->
-            let parentProjectPath =
-                dir |> findParentProjectPath discoveryRoot projectMatcher includeRootDir
-
-            match parentProjectPath with
-            | Some p -> p
-            | None -> NoProject)
-        |> Seq.choose (fun (projectPath, dirs) ->
-            Log.debug "Project: '%s'" projectPath
-            dirs |> Seq.iter (Log.debug " - %s")
-
-            match projectPath with
-            | NoProject -> None
-            | s -> Some s)
+        |> findParentProjects
         |> Seq.distinct
         |> Seq.collect (selector.expandLeafs selector)
         |> Seq.distinct
