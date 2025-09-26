@@ -38,24 +38,32 @@ and Profile =
 
 [<RequireQualifiedAccess>]
 module Pipeline =
+    open System
     open System.IO
     open System.Text.RegularExpressions
 
     /// Find the closest ancestor dir of the originPath that contains a single file matching projectPattern
     let findParentProjectPath
+        (rootDir: string)
         (projectPattern: string)
+        (projectExtension: string)
         (patternIgnores: string list)
         (originPath: string)
         : string option =
-        let rec findParentProj (p: string) =
 
-            let patternFile = projectPattern |> Path.GetFileName
-            let patternDir = projectPattern |> Path.GetDirectoryName
+        Log.debug "origin path: %s" originPath
 
+        let rec findParentProj (p: string) (depth: int) =
             match
-                Directory.EnumerateFiles(p, patternFile)
-                |> Seq.filter (fun path -> Regex.IsMatch(path, $"^{patternDir}.*"))
-                |> Seq.map(fun path -> Log.trace "MATCH: %s" path; path)
+                Directory.EnumerateFiles(p, projectExtension)
+                |> Seq.map (fun p -> Path.GetRelativePath(rootDir, p))
+                |> Seq.map (fun path ->
+                    Log.debug "%sPATH: %s" (String(' ', depth * 2)) path
+                    path)
+                |> Seq.filter (fun path -> Regex.isMatchSafe path projectPattern)
+                |> Seq.map (fun path ->
+                    Log.debug "%s  >>> PROJECT FOUND: %s <<<" (String(' ', depth * 2)) path
+                    path)
                 |> Seq.filter (fun path ->
                     patternIgnores
                     |> Seq.exists (fun pattern -> Regex.IsMatch(path, pattern))
@@ -65,15 +73,24 @@ module Pipeline =
             | None ->
                 match Directory.GetParent p with
                 | null -> None
-                | p -> findParentProj p.FullName
+                | p -> findParentProj p.FullName (depth + 1)
             | Some proj -> Some(proj |> Path.GetFullPath)
 
-        findParentProj originPath
+        findParentProj originPath 0
 
-    let findRequiredProjects (dirPaths: string seq) (config: Selector) =
+    let findRequiredProjects (rootDir: string) (dirPaths: string seq) (config: Selector) =
+
+        Log.debug "pattern: %s" config.pattern
+        Log.debug "exclude: %A" config.patternIgnores
+
+        let projectExtension =
+            let splitAt = config.pattern.LastIndexOf '.' + 1
+            $"*.{config.pattern[splitAt..]}"
+
+        Log.debug "extension: %s" projectExtension
 
         dirPaths
-        |> Seq.choose (findParentProjectPath config.pattern config.patternIgnores)
+        |> Seq.choose (findParentProjectPath rootDir config.pattern projectExtension config.patternIgnores)
         |> Seq.distinct
         |> Seq.collect (config.expandLeafs config)
         |> Seq.distinct
@@ -505,7 +522,9 @@ module rec PlanBuilder =
                 | _ -> failwithf $"No selectors configured"
 
             let result =
-                { requiredProjects = selector |> Pipeline.findRequiredProjects dirs |> Seq.toList
+                { requiredProjects =
+                    Pipeline.findRequiredProjects (System.IO.Directory.GetCurrentDirectory()) dirs selector
+                    |> Seq.toList
                   changeSetRange = diffRange
                   changeKeys =
                     diffRange
