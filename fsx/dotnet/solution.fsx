@@ -1,5 +1,5 @@
 #r "paket: 
-      nuget Ionide.ProjInfo ~> 0.70
+      nuget Ionide.ProjInfo ~> 0.73
       nuget Fake.Core.Process ~> 6.0
 "
 
@@ -32,7 +32,7 @@ module Solution =
     let findInDir (dir: string) : string =
         Directory.EnumerateFiles dir
         |> Seq.map FileInfo
-        |> Seq.tryFind (fun f -> f.Extension = ".sln")
+        |> Seq.tryFind (fun f -> f.Extension = ".sln" || f.Extension = ".slnx")
         |> Option.defaultWith (fun () -> failwith $"Sln file not found")
         |> fun f -> f.FullName
         |> IO.Path.GetFullPath
