@@ -10,12 +10,15 @@ Authoring a `plan` can be done in an interactive manner using `dotnet fsi`.
 
 Prerequisites
 
-* A `paket` dependency manager provided to `dotnet fsi` via `--compilertool`. It can be installed via the [fsy](https://github.com/queil/fsy) dotnet tool.
+* A `paket` dependency manager provided to `dotnet fsi` via `--compilertool`.
 
-1. Install `fsy`: `dotnet tool install --global fsy`
-2. Install the `paket` manager files via: `fsy install-fsx-extensions` (it copies it to: `~/.fsharp/fsx-extensions/.fsch`)
+It can be installed via the [fsy](https://github.com/queil/fsy) dotnet tool.
+  * in dotnet 10 onwards it can be installed via `dnx fsy install-fsx-extensions`
+  * dotnet < 10:
+      1. Install `fsy`: `dotnet tool install --global fsy`
+      2. Install the `paket` manager files via: `fsy install-fsx-extensions` (it copies it to: `~/.fsharp/fsx-extensions/.fsch`)
 
-Pre-load an fsi session with `fsx/plan.fsx`: 
+Pre-load an fsi session with `fsx/plan.fsx`:
 
 ```bash
 dotnet fsi --compilertool:$(echo ~/.fsharp/fsx-extensions/.fsch) --use:./.fsi/plan.fsx
