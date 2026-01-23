@@ -540,7 +540,10 @@ module rec PlanBuilder =
                 { env with
                     DBT_BASE_COMMIT =
                         env.DBT_BASE_COMMIT
-                        |> Option.orElseWith (fun () -> LastSuccessSha.getLastSuccessCommitHash () |> _.toOption) })
+                        |> Option.orElseWith (fun () ->
+                            match env.DBT_PR_TARGET_BRANCH with
+                            | Some _ -> None
+                            | _ -> LastSuccessSha.getLastSuccessCommitHash () |> _.toOption) })
 
         let evaluate (plan: Plan) : PlanOutput =
 
@@ -576,11 +579,11 @@ module rec PlanBuilder =
                     Log.header "GIT CHANGE SET"
 
                     let baseCommitStrategy (fromRef: string option) =
-                        match fromRef with
-                        | Some ref -> Override ref
+                        match env.DBT_PR_TARGET_BRANCH with
+                        | Some branch -> MergeBase branch
                         | None ->
-                            match env.DBT_PR_TARGET_BRANCH with
-                            | Some branch -> MergeBase branch
+                            match fromRef with
+                            | Some branch -> Override branch
                             | None -> Parent
 
                     let result =
