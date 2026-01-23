@@ -1,4 +1,4 @@
-#r "paket: nuget FSharp.SystemTextJson ~> 1.3"
+#r "paket: nuget FSharp.SystemTextJson ~> 1.4"
 
 namespace Arquidev.Dbt
 

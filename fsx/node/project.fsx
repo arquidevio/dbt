@@ -3,7 +3,6 @@
 
 namespace Arquidev.Dbt
 
-
 [<AutoOpen>]
 module NodeSelectors =
 

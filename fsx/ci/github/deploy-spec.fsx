@@ -1,7 +1,10 @@
 namespace Arquidev.Dbt
 
 #load "../../types.fsx"
-#load "../../env.fsx"
+
+#r "paket: nuget Arquidev.Env ~> 1"
+
+open Arquidev
 
 [<AutoOpen>]
 module GitHubDeploymentSpec =
@@ -10,13 +13,13 @@ module GitHubDeploymentSpec =
     module Plan =
 
         type BuildEnv =
-            { [<Default("invalid")>]
+            { [<Env.Default("invalid")>]
               GITHUB_REPOSITORY: string
-              [<Default("development")>]
+              [<Env.Default("development")>]
               GITHUB_REF_NAME: string
-              [<Default("00000000")>]
+              [<Env.Default("00000000")>]
               GITHUB_SHA: string
-              [<Default("1")>]
+              [<Env.Default("1")>]
               GITHUB_RUN_ID: int64 }
 
             member x.GITHUB_SHA_SHORT = x.GITHUB_SHA[..6]

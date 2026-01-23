@@ -1,5 +1,5 @@
 #r "paket: 
-      nuget Ionide.ProjInfo ~> 0.73
+      nuget Ionide.ProjInfo ~> 0.74
       nuget Fake.Core.Process ~> 6.0
 "
 

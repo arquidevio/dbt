@@ -1,8 +1,9 @@
-#load "../../env.fsx"
-#r "paket: nuget Arquidev.Fetch ~> 1.1.1"
+#r "paket: nuget Arquidev.Fetch ~> 1.1.1
+           nuget Arquidev.Env ~> 1"
 
 namespace Arquidev.Dbt
 
+open Arquidev
 open Arquidev.Fetch
 
 type Step = { conclusion: string option }

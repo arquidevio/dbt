@@ -1,6 +1,8 @@
 namespace Arquidev.Dbt
 
-#load "env.fsx"
+#r "paket: nuget Arquidev.Env ~> 1"
+
+open Arquidev
 
 [<RequireQualifiedAccess>]
 module Log =
@@ -13,14 +15,14 @@ module Log =
         | error
 
     type LogEnv =
-        { [<Default("info")>]
+        { [<Env.Default("info")>]
           DBT_LOG_LEVEL: LogLevel }
 
     let private env = Lazy<LogEnv>(fun () -> Env.get<LogEnv> ())
 
     let mutable private currentLevel = env.Value.DBT_LOG_LEVEL
 
-    let debugEnabled() = currentLevel >= LogLevel.debug
+    let debugEnabled () = currentLevel >= LogLevel.debug
 
     let enableTrace (enable: bool) =
         if enable then

@@ -1,8 +1,11 @@
 namespace Arquidev.Dbt
 
 #load "../../types.fsx"
-#load "../../env.fsx"
 #load "../../json.fsx"
+
+#r "paket: nuget Arquidev.Env ~> 1"
+
+open Arquidev
 
 [<AutoOpen>]
 module Output =
@@ -13,7 +16,7 @@ module Output =
         open System.IO
 
         type GithubEnv =
-            { [<Default("vars.env")>]
+            { [<Env.Default("vars.env")>]
               GITHUB_OUTPUT: string }
 
         let internal env = Lazy<GithubEnv>(fun () -> Env.get<GithubEnv> ())

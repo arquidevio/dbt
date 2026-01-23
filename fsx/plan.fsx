@@ -1,15 +1,18 @@
 namespace Arquidev.Dbt
 
 #load "types.fsx"
-#load "env.fsx"
 #load "log.fsx"
 #load "git-diff.fsx"
 #load "tools/git.fsx"
 #load "ci/github/last-success-sha.fsx"
 #load "ce.fsx"
 
-#r "paket: nuget Microsoft.Extensions.FileSystemGlobbing ~> 9"
+#r "paket:
+        nuget Microsoft.Extensions.FileSystemGlobbing ~> 10
+        nuget Arquidev.Env ~> 1
+"
 
+open Arquidev
 open Arquidev.Dbt
 open Microsoft.Extensions.FileSystemGlobbing
 
@@ -519,9 +522,9 @@ module rec PlanBuilder =
         | Diff
 
     type DbtEnv =
-        { [<Default("diff")>]
+        { [<Env.Default("diff")>]
           DBT_MODE: Mode
-          [<Default("default")>]
+          [<Env.Default("default")>]
           DBT_PROFILE: string
           DBT_CURRENT_COMMIT: string option
           DBT_BASE_COMMIT: string option }
