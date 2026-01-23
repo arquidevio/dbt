@@ -47,7 +47,7 @@ module GitDiff =
                 git pwd $"git fetch origin \"{targetBranch}\"" |> ignore
 
                 let output =
-                    git pwd $"""merge-base origin/{targetBranch} {currentCommit} """
+                    git pwd $"""merge-base {targetBranch} {currentCommit} """
 
                 [ output.Trim() ]
 
