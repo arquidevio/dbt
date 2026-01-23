@@ -527,7 +527,8 @@ module rec PlanBuilder =
           [<Env.Default("default")>]
           DBT_PROFILE: string
           DBT_CURRENT_COMMIT: string option
-          DBT_BASE_COMMIT: string option }
+          DBT_BASE_COMMIT: string option
+          DBT_PR_TARGET_BRANCH: string option }
 
     [<RequireQualifiedAccess>]
     module Plan =
@@ -539,7 +540,10 @@ module rec PlanBuilder =
                 { env with
                     DBT_BASE_COMMIT =
                         env.DBT_BASE_COMMIT
-                        |> Option.orElseWith (fun () -> LastSuccessSha.getLastSuccessCommitHash () |> _.toOption) })
+                        |> Option.orElseWith (fun () ->
+                            match env.DBT_PR_TARGET_BRANCH with
+                            | Some _ -> None
+                            | _ -> LastSuccessSha.getLastSuccessCommitHash () |> _.toOption) })
 
         let evaluate (plan: Plan) : PlanOutput =
 
@@ -569,16 +573,23 @@ module rec PlanBuilder =
                 | Some p when p |> Map.count > 0 && p.ContainsKey profileId -> p[profileId]
                 | _ -> failwithf $"Profile {profileId} not configured"
 
-
             let dirs, diffRange =
                 match mode with
                 | Diff ->
                     Log.header "GIT CHANGE SET"
 
+                    let baseCommitStrategy (fromRef: string option) =
+                        match env.DBT_PR_TARGET_BRANCH with
+                        | Some branch -> MergeBase branch
+                        | None ->
+                            match fromRef with
+                            | Some ref -> Override ref
+                            | None -> Parent
+
                     let result =
                         plan.range
-                        |> Option.map (fun r -> profile.includeRootDir, r.fromRef, r.toRef)
-                        |> Option.defaultValue ((profile.includeRootDir, None, None))
+                        |> Option.map (fun r -> profile.includeRootDir, baseCommitStrategy r.fromRef, r.toRef)
+                        |> Option.defaultValue ((profile.includeRootDir, baseCommitStrategy None, None))
                         |||> GitDiff.dirsFromDiff
 
                     result.dirs,

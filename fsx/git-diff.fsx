@@ -8,33 +8,46 @@ namespace Arquidev.Dbt
 open Fake.Tools.Git
 open System.IO
 
+type BaseCommitStrategy =
+    | Override of hash: string
+    | Parent
+    | MergeBase of targetBranch: string
+
 [<RequireQualifiedAccess>]
 module GitDiff =
 
     let pwd = Directory.GetCurrentDirectory()
-    let git = CommandHelper.runSimpleGitCommand
+    let git = CommandHelper.runSimpleGitCommand pwd
 
     let allDirs (includeRootDir: bool) : string seq =
         FileStatus.getAllFiles pwd
         |> Seq.map (snd >> FileInfo >> (fun f -> Path.GetRelativePath(pwd, f.Directory.FullName)))
         |> fun xs -> if includeRootDir then xs else xs |> Seq.filter ((<>) ".")
 
-    let dirsFromDiff (includeRootDir: bool) (fromRef: string option) (toRef: string option) : DiffResult =
+    let dirsFromDiff (includeRootDir: bool) (fromRef: BaseCommitStrategy) (toRef: string option) : DiffResult =
 
-        let currentCommit = toRef |> Option.defaultWith (fun () -> git pwd "rev-parse HEAD")
+        let currentCommit = toRef |> Option.defaultWith (fun () -> git "rev-parse HEAD")
         let baseCommit = fromRef
 
         Log.info $"Current revision: %s{currentCommit}"
+        Log.info $"Resolving base commit using strategy: %A{fromRef}"
 
         let baseRefs =
             match baseCommit with
-            | None
-            | Some "0000000000000000000000000000000000000000" ->
+            | Parent
+            | Override "0000000000000000000000000000000000000000" ->
                 Log.info "Base revisions(s): "
-                let output = git pwd $$"""show --no-patch --format="%P" {{currentCommit}}"""
+                let output = git $$"""show --no-patch --format="%P" {{currentCommit}}"""
                 output.Split ' ' |> Seq.toList
-            | Some ref ->
+            | Override ref ->
                 Log.info $"Base revision override: {ref}"
+                [ ref ]
+            | MergeBase targetBranch ->
+                Log.info "%s" (git $"fetch origin {targetBranch}:refs/remotes/origin/{targetBranch}")
+
+                let output = git $"""merge-base origin/{targetBranch} {currentCommit} """
+                let ref = output.Trim()
+                Log.info $"Base revision: {ref}"
                 [ ref ]
 
         let dirs =
