@@ -56,7 +56,7 @@ let mergeSelectorsExtend =
         "Pattern should be *.toml" |> Expect.equal selector.pattern "*.toml"
 
         "Excludes should be merged in the reverse order"
-        |> Expect.sequenceEqual selector.patternIgnores [ "blue"; "green" ]
+        |> Expect.sequenceEqual selector.excludePatterns [ "blue"; "green" ]
     }
 
 [<Tests>]

@@ -1,4 +1,3 @@
-#load "../fsx/env.fsx"
 #load "../fsx/git-diff.fsx"
 #load "../fsx/dotnet/project.fsx"
 #load "../fsx/dotnet/solution.fsx"
