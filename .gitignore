@@ -2,3 +2,5 @@
 **/.fsch
 **/*.dll
 **/*.runtimeconfig.json
+**/.DS_Store
+**/.idea/
