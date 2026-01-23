@@ -44,7 +44,7 @@ module GitDiff =
                 [ ref ]
             | MergeBase targetBranch ->
                 Log.info "Base revision: "
-                git pwd $"fetch origin {targetBranch}" |> Log.info "%s"
+                Log.info "%s" (git pwd $"fetch origin {targetBranch}")
 
                 let output =
                     git pwd $"""merge-base {targetBranch} {currentCommit} """
