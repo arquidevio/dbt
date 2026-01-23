@@ -8,6 +8,11 @@ namespace Arquidev.Dbt
 open Fake.Tools.Git
 open System.IO
 
+type BaseCommitStrategy =
+    | Override of hash: string
+    | Parent
+    | MergeBase of targetBranch: string
+
 [<RequireQualifiedAccess>]
 module GitDiff =
 
@@ -19,23 +24,32 @@ module GitDiff =
         |> Seq.map (snd >> FileInfo >> (fun f -> Path.GetRelativePath(pwd, f.Directory.FullName)))
         |> fun xs -> if includeRootDir then xs else xs |> Seq.filter ((<>) ".")
 
-    let dirsFromDiff (includeRootDir: bool) (fromRef: string option) (toRef: string option) : DiffResult =
+    let dirsFromDiff (includeRootDir: bool) (fromRef: BaseCommitStrategy) (toRef: string option) : DiffResult =
 
         let currentCommit = toRef |> Option.defaultWith (fun () -> git pwd "rev-parse HEAD")
         let baseCommit = fromRef
 
         Log.info $"Current revision: %s{currentCommit}"
+        Log.info $"Resolving base commit using strategy: %A{fromRef}"
 
         let baseRefs =
             match baseCommit with
-            | None
-            | Some "0000000000000000000000000000000000000000" ->
+            | Parent
+            | Override "0000000000000000000000000000000000000000" ->
                 Log.info "Base revisions(s): "
                 let output = git pwd $$"""show --no-patch --format="%P" {{currentCommit}}"""
                 output.Split ' ' |> Seq.toList
-            | Some ref ->
+            | Override ref ->
                 Log.info $"Base revision override: {ref}"
                 [ ref ]
+            | MergeBase targetBranch ->
+                Log.info "Base revision: "
+                git pwd $"git fetch origin \"{targetBranch}\"" |> ignore
+
+                let output =
+                    git pwd $"""merge-base \"origin/{targetBranch}\" \"{currentCommit}\" """
+
+                [ output.Trim() ]
 
         let dirs =
             seq {

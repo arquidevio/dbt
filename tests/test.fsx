@@ -8,4 +8,4 @@
 
 open Arquidev.Dbt
 
-GitDiff.dirsFromDiff false (Some "HEAD^^^") (Some "HEAD")
+GitDiff.dirsFromDiff false (Override "HEAD^^^") (Some "HEAD")

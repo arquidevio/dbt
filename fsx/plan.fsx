@@ -527,7 +527,8 @@ module rec PlanBuilder =
           [<Env.Default("default")>]
           DBT_PROFILE: string
           DBT_CURRENT_COMMIT: string option
-          DBT_BASE_COMMIT: string option }
+          DBT_BASE_COMMIT: string option
+          DBT_PR_TARGET_BRANCH: string option }
 
     [<RequireQualifiedAccess>]
     module Plan =
@@ -569,16 +570,23 @@ module rec PlanBuilder =
                 | Some p when p |> Map.count > 0 && p.ContainsKey profileId -> p[profileId]
                 | _ -> failwithf $"Profile {profileId} not configured"
 
-
             let dirs, diffRange =
                 match mode with
                 | Diff ->
                     Log.header "GIT CHANGE SET"
 
+                    let baseCommitStrategy (fromRef: string option) =
+                        match fromRef with
+                        | Some ref -> Override ref
+                        | None ->
+                            match env.DBT_PR_TARGET_BRANCH with
+                            | Some branch -> MergeBase branch
+                            | None -> Parent
+
                     let result =
                         plan.range
-                        |> Option.map (fun r -> profile.includeRootDir, r.fromRef, r.toRef)
-                        |> Option.defaultValue ((profile.includeRootDir, None, None))
+                        |> Option.map (fun r -> profile.includeRootDir, baseCommitStrategy r.fromRef, r.toRef)
+                        |> Option.defaultValue ((profile.includeRootDir, baseCommitStrategy None, None))
                         |||> GitDiff.dirsFromDiff
 
                     result.dirs,
