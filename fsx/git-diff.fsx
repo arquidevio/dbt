@@ -48,7 +48,7 @@ module GitDiff =
                 Log.info "%s" (git pwd $"fetch origin {targetBranch}:refs/remotes/origin/{targetBranch}")
 
                 let output =
-                    git pwd $"""merge-base {targetBranch} {currentCommit} """
+                    git pwd $"""merge-base origin/{targetBranch} {currentCommit} """
 
                 [ output.Trim() ]
 
