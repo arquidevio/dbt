@@ -43,14 +43,12 @@ module GitDiff =
                 Log.info $"Base revision override: {ref}"
                 [ ref ]
             | MergeBase targetBranch ->
-                Log.info "Base revision: "
-                Log.info "%s" (git pwd $"branch -r")
                 Log.info "%s" (git pwd $"fetch origin {targetBranch}:refs/remotes/origin/{targetBranch}")
 
-                let output =
-                    git pwd $"""merge-base origin/{targetBranch} {currentCommit} """
-
-                [ output.Trim() ]
+                let output = git pwd $"""merge-base origin/{targetBranch} {currentCommit} """
+                let ref = output.Trim()
+                Log.info $"Base revision: {ref}"
+                [ ref ]
 
         let dirs =
             seq {
