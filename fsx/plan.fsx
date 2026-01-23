@@ -583,7 +583,7 @@ module rec PlanBuilder =
                         | Some branch -> MergeBase branch
                         | None ->
                             match fromRef with
-                            | Some branch -> Override branch
+                            | Some ref -> Override ref
                             | None -> Parent
 
                     let result =

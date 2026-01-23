@@ -17,7 +17,7 @@ type BaseCommitStrategy =
 module GitDiff =
 
     let pwd = Directory.GetCurrentDirectory()
-    let git = CommandHelper.runSimpleGitCommand
+    let git = CommandHelper.runSimpleGitCommand pwd
 
     let allDirs (includeRootDir: bool) : string seq =
         FileStatus.getAllFiles pwd
@@ -26,7 +26,7 @@ module GitDiff =
 
     let dirsFromDiff (includeRootDir: bool) (fromRef: BaseCommitStrategy) (toRef: string option) : DiffResult =
 
-        let currentCommit = toRef |> Option.defaultWith (fun () -> git pwd "rev-parse HEAD")
+        let currentCommit = toRef |> Option.defaultWith (fun () -> git "rev-parse HEAD")
         let baseCommit = fromRef
 
         Log.info $"Current revision: %s{currentCommit}"
@@ -37,15 +37,15 @@ module GitDiff =
             | Parent
             | Override "0000000000000000000000000000000000000000" ->
                 Log.info "Base revisions(s): "
-                let output = git pwd $$"""show --no-patch --format="%P" {{currentCommit}}"""
+                let output = git $$"""show --no-patch --format="%P" {{currentCommit}}"""
                 output.Split ' ' |> Seq.toList
             | Override ref ->
                 Log.info $"Base revision override: {ref}"
                 [ ref ]
             | MergeBase targetBranch ->
-                Log.info "%s" (git pwd $"fetch origin {targetBranch}:refs/remotes/origin/{targetBranch}")
+                Log.info "%s" (git $"fetch origin {targetBranch}:refs/remotes/origin/{targetBranch}")
 
-                let output = git pwd $"""merge-base origin/{targetBranch} {currentCommit} """
+                let output = git $"""merge-base origin/{targetBranch} {currentCommit} """
                 let ref = output.Trim()
                 Log.info $"Base revision: {ref}"
                 [ ref ]
