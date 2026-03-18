@@ -46,11 +46,16 @@ type ChangeSetRange =
 type PlanOutput =
     { requiredProjects: ProjectMetadata list
       changeKeys: string list option
-      changeSetRange: ChangeSetRange option }
+      changeSetRange: ChangeSetRange option
+      changedDirs: string list option }
 
 type DiffResult =
     { effectiveRange: ChangeSetRange
       dirs: string seq }
+
+type SnapshotMode =
+    | Write
+    | Validate
 
 type BuildSpec = { docker: DockerBuildSpec list }
 
