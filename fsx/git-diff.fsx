@@ -19,10 +19,15 @@ module GitDiff =
     let pwd = Directory.GetCurrentDirectory()
     let git = CommandHelper.runSimpleGitCommand pwd
 
-    let allDirs (includeRootDir: bool) : string seq =
+    let allDirs (includeRootDir: bool) : Map<string, string seq> =
         FileStatus.getAllFiles pwd
-        |> Seq.map (snd >> FileInfo >> (fun f -> Path.GetRelativePath(pwd, f.Directory.FullName)))
-        |> fun xs -> if includeRootDir then xs else xs |> Seq.filter ((<>) ".")
+        |> Seq.map (fun (_, filePath) ->
+            let dir = Path.GetRelativePath(pwd, (FileInfo filePath).Directory.FullName)
+            dir, filePath)
+        |> fun pairs -> if includeRootDir then pairs else pairs |> Seq.filter (fun (dir, _) -> dir <> ".")
+        |> Seq.groupBy fst
+        |> Seq.map (fun (dir, pairs) -> dir, pairs |> Seq.map snd)
+        |> Map.ofSeq
 
     let dirsFromDiff (includeRootDir: bool) (fromRef: BaseCommitStrategy) (toRef: string option) : DiffResult =
 
@@ -56,31 +61,33 @@ module GitDiff =
                 for baseRef in baseRefs do
                     yield!
                         FileStatus.getChangedFiles pwd currentCommit baseRef
-                        |> Seq.map (snd >> FileInfo >> (fun f -> Path.GetRelativePath(pwd, f.Directory.FullName)))
-                        |> fun paths ->
-                            if includeRootDir then
-                                paths
-                            else
-                                paths |> Seq.filter ((<>) ".")
+                        |> Seq.map (fun (_, filePath) ->
+                            let dir = Path.GetRelativePath(pwd, (FileInfo filePath).Directory.FullName)
+                            dir, filePath)
+                        |> fun pairs ->
+                            if includeRootDir then pairs
+                            else pairs |> Seq.filter (fun (dir, _) -> dir <> ".")
             }
-            |> Seq.distinct
+            |> Seq.groupBy fst
+            |> Seq.map (fun (dir, pairs) -> dir, pairs |> Seq.map snd |> Seq.distinct)
+            |> Map.ofSeq
 
         let info =
-            if dirs |> Seq.isEmpty then
+            if dirs |> Map.isEmpty then
                 "No relevant changes detected"
             else
                 "Detected git changes in: "
 
         Log.info $"%s{info}"
-        dirs |> Seq.iter (Log.info "%s")
+        dirs |> Map.iter (fun dir _ -> Log.info "%s" dir)
 
         let dirs =
             dirs
-            |> Seq.filter (fun p ->
-                if Directory.Exists p then
+            |> Map.filter (fun dir _ ->
+                if Directory.Exists dir then
                     true
                 else
-                    Log.warn $"WARNING: path '%s{p}' no longer exists in the repository. Ignoring."
+                    Log.warn $"WARNING: path '%s{dir}' no longer exists in the repository. Ignoring."
                     false)
 
         { dirs = dirs
