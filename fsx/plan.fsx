@@ -6,6 +6,7 @@ namespace Arquidev.Dbt
 #load "tools/git.fsx"
 #load "ci/github/last-success-sha.fsx"
 #load "ce.fsx"
+#load "snapshot.fsx"
 
 #r "paket:
         nuget Microsoft.Extensions.FileSystemGlobbing ~> 10
@@ -607,6 +608,10 @@ module rec PlanBuilder =
             let result =
                 { requiredProjects = Pipeline.findRequiredProjects dirs profile.includeRootDir selector |> Seq.toList
                   changeSetRange = diffRange
+                  changedDirs =
+                    match mode with
+                    | Diff -> Some(dirs |> Seq.toList)
+                    | All -> None
                   changeKeys =
                     diffRange
                     |> Option.map (fun r ->
@@ -628,6 +633,8 @@ module rec PlanBuilder =
 #endif
             for action in profile.postActions do
                 action result
+
+            Snapshot.apply result
 
             result
 
