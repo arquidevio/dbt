@@ -108,6 +108,30 @@ module Solution =
 
         find [] projectPath |> Seq.distinct
 
+    /// Like findLeafDependants but traverses the full graph without stopping at
+    /// the first matching node, collecting all projects that meet isLeafProject.
+    let findAllLeafDependants
+        (projs: IDictionary<string, list<string>>)
+        (isLeafProject: string -> bool)
+        (projectPath: string)
+        =
+        let rec find (visited: Set<string>) (proj: string) : string list =
+            if visited.Contains(proj) then
+                []
+            else
+                let visited' = visited.Add(proj)
+
+                let dependantResults =
+                    if projs.ContainsKey(proj) then
+                        projs[proj] |> Seq.collect (find visited') |> Seq.toList
+                    else
+                        []
+
+                if isLeafProject proj then proj :: dependantResults
+                else dependantResults
+
+        find Set.empty projectPath |> Seq.distinct
+
     let generateRestoreList (slnDir: string) : unit =
         Log.header "RESTORE LIST"
         let slnPath = findInDir slnDir
