@@ -2,9 +2,9 @@ namespace Arquidev.Dbt
 
 #load "../../types.fsx"
 
-#r "paket: nuget Arquidev.Env ~> 1"
+#r "paket: nuget Arquidev.Env ~> 2.0.1"
 
-open Arquidev
+open Arquidev.Tools
 
 [<AutoOpen>]
 module GitHubDeploymentSpec =
@@ -26,7 +26,7 @@ module GitHubDeploymentSpec =
 
         let deploymentSpec (planOutput: PlanOutput) =
 
-            let env = Env.get<BuildEnv> ()
+            let env = readEnv<BuildEnv> ()
 
             { source_repo = env.GITHUB_REPOSITORY
               source_branch = env.GITHUB_REF_NAME

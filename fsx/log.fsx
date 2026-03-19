@@ -1,8 +1,8 @@
 namespace Arquidev.Dbt
 
-#r "paket: nuget Arquidev.Env ~> 1"
+#r "paket: nuget Arquidev.Env ~> 2.0.1"
 
-open Arquidev
+open Arquidev.Tools
 
 [<RequireQualifiedAccess>]
 module Log =
@@ -18,7 +18,7 @@ module Log =
         { [<Env.Default("info")>]
           DBT_LOG_LEVEL: LogLevel }
 
-    let private env = Lazy<LogEnv>(fun () -> Env.get<LogEnv> ())
+    let private env = Lazy<LogEnv>(fun () -> readEnv<LogEnv> ())
 
     let mutable private currentLevel = env.Value.DBT_LOG_LEVEL
 

@@ -3,9 +3,9 @@ namespace Arquidev.Dbt
 #load "../../types.fsx"
 #load "../../json.fsx"
 
-#r "paket: nuget Arquidev.Env ~> 1"
+#r "paket: nuget Arquidev.Env ~> 2.0.1"
 
-open Arquidev
+open Arquidev.Tools
 
 [<AutoOpen>]
 module Output =
@@ -19,7 +19,7 @@ module Output =
             { [<Env.Default("vars.env")>]
               GITHUB_OUTPUT: string }
 
-        let internal env = Lazy<GithubEnv>(fun () -> Env.get<GithubEnv> ())
+        let internal env = Lazy<GithubEnv>(fun () -> readEnv<GithubEnv> ())
 
         let appendToGithubOutput (key: string) (value: string) (planOutput: PlanOutput) =
 
