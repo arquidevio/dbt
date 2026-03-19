@@ -24,7 +24,11 @@ module GitDiff =
         |> Seq.map (fun (_, filePath) ->
             let dir = Path.GetRelativePath(pwd, (FileInfo filePath).Directory.FullName)
             dir, filePath)
-        |> fun pairs -> if includeRootDir then pairs else pairs |> Seq.filter (fun (dir, _) -> dir <> ".")
+        |> fun pairs ->
+            if includeRootDir then
+                pairs
+            else
+                pairs |> Seq.filter (fun (dir, _) -> dir <> ".")
         |> Seq.groupBy fst
         |> Seq.map (fun (dir, pairs) -> dir, pairs |> Seq.map snd)
         |> Map.ofSeq
@@ -65,8 +69,10 @@ module GitDiff =
                             let dir = Path.GetRelativePath(pwd, (FileInfo filePath).Directory.FullName)
                             dir, filePath)
                         |> fun pairs ->
-                            if includeRootDir then pairs
-                            else pairs |> Seq.filter (fun (dir, _) -> dir <> ".")
+                            if includeRootDir then
+                                pairs
+                            else
+                                pairs |> Seq.filter (fun (dir, _) -> dir <> ".")
             }
             |> Seq.groupBy fst
             |> Seq.map (fun (dir, pairs) -> dir, pairs |> Seq.map snd |> Seq.distinct)

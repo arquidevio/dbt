@@ -52,10 +52,9 @@ type PlanOutput =
     { requiredProjects: ProjectMetadata list
       changeKeys: string list option
       changeSetRange: ChangeSetRange option
-      changedDirs: string list option }
+      changedDirs: Map<string, string list> option }
 
-type SelectionContext =
-    { filesByDir: Map<string, string seq> }
+type SelectionContext = { filesByDir: Map<string, string seq> }
 
 type DiffResult =
     { effectiveRange: ChangeSetRange

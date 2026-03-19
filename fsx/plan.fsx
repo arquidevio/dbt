@@ -611,11 +611,13 @@ module rec PlanBuilder =
                 | _ -> failwithf $"No selectors configured"
 
             let result =
-                { requiredProjects = Pipeline.findRequiredProjects { filesByDir = dirs } profile.includeRootDir selector |> Seq.toList
+                { requiredProjects =
+                    Pipeline.findRequiredProjects { filesByDir = dirs } profile.includeRootDir selector
+                    |> Seq.toList
                   changeSetRange = diffRange
                   changedDirs =
                     match mode with
-                    | Diff -> Some(dirs |> Seq.toList)
+                    | Diff -> Some dirs
                     | All -> None
                   changeKeys =
                     diffRange
