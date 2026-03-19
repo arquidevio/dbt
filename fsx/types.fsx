@@ -27,7 +27,7 @@ type Selector =
       isRequired: string -> bool
       isIgnored: string -> bool
       projectId: ProjectMetadata -> string
-      expandLeafs: Selector -> string -> string seq }
+      expandLeafs: LeafExpansionContext -> string seq }
 
     static member internal Default =
         { id = "none"
@@ -37,7 +37,12 @@ type Selector =
           isIgnored = fun _ -> false
           isRequired = fun _ -> true
           projectId = fun p -> p.projectId
-          expandLeafs = fun _ path -> Seq.singleton path }
+          expandLeafs = fun ctx -> Seq.singleton ctx.projectPath }
+
+and LeafExpansionContext =
+    { selector: Selector
+      projectPath: string
+      filesByDir: Map<string, string list> }
 
 type ChangeSetRange =
     { baseCommits: string list
@@ -47,11 +52,14 @@ type PlanOutput =
     { requiredProjects: ProjectMetadata list
       changeKeys: string list option
       changeSetRange: ChangeSetRange option
-      changedDirs: string list option }
+      changedDirs: Map<string, string list> option }
+
+type SelectionContext =
+    { filesByDir: Map<string, string list> }
 
 type DiffResult =
     { effectiveRange: ChangeSetRange
-      dirs: string seq }
+      dirs: Map<string, string list> }
 
 type SnapshotMode =
     | Write

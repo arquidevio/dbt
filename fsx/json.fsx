@@ -12,7 +12,9 @@ module Json =
         JsonFSharpOptions.Default().WithSkippableOptionFields().ToJsonSerializerOptions()
 
     let private PrettyOptions =
-        let o = JsonFSharpOptions.Default().WithSkippableOptionFields().ToJsonSerializerOptions()
+        let o =
+            JsonFSharpOptions.Default().WithSkippableOptionFields().ToJsonSerializerOptions()
+
         o.WriteIndented <- true
         o
 

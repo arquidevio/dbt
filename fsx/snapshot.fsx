@@ -9,7 +9,7 @@ open System.IO
 
 type private SnapshotRecord =
     { changeSetRange: ChangeSetRange option
-      changedDirs: string list
+      changedDirs: Map<string, string list>
       requiredProjects: ProjectMetadata list }
 
 [<RequireQualifiedAccess>]
@@ -17,7 +17,7 @@ module Snapshot =
 
     let private toRecord (output: PlanOutput) : SnapshotRecord =
         { changeSetRange = output.changeSetRange
-          changedDirs = output.changedDirs |> Option.defaultValue []
+          changedDirs = output.changedDirs |> Option.defaultValue Map.empty
           requiredProjects = output.requiredProjects }
 
     let private baseName (output: PlanOutput) =

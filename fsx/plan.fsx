@@ -78,7 +78,7 @@ module Pipeline =
 
         findParentProj originPath
 
-    let findRequiredProjects (dirPaths: string seq) (includeRootDir: bool) (selector: Selector) =
+    let findRequiredProjects (ctx: SelectionContext) (includeRootDir: bool) (selector: Selector) =
 
         let discoveryRoot =
             let cwd = Directory.GetCurrentDirectory()
@@ -112,10 +112,15 @@ module Pipeline =
             else
                 Seq.choose findParent
 
-        dirPaths
+        ctx.filesByDir
+        |> Map.keys
         |> findParentProjects
         |> Seq.distinct
-        |> Seq.collect (selector.expandLeafs selector)
+        |> Seq.collect (fun projectPath ->
+            selector.expandLeafs
+                { selector = selector
+                  projectPath = projectPath
+                  filesByDir = ctx.filesByDir })
         |> Seq.distinct
         |> Seq.filter (not << selector.isIgnored)
         |> Seq.toList
@@ -176,7 +181,7 @@ module rec PlanBuilder =
         | RequiredWhen of (string -> bool)
         | IgnoredWhen of (string -> bool)
         | ProjectId of (ProjectMetadata -> string)
-        | ExpandLeafs of (Selector -> string -> string seq)
+        | ExpandLeafs of (LeafExpansionContext -> string seq)
 
     type SelectorBuilderDefaults() = class end
 
@@ -289,7 +294,7 @@ module rec PlanBuilder =
         /// * Some built-in selectors, like the dotnet selector have a strategy implemented
         /// </remarks>
         [<CustomOperation("expand_leafs")>]
-        member inline _.ExpandLeafs(state, expandLeafs: Selector -> string -> string seq) =
+        member inline _.ExpandLeafs(state, expandLeafs: LeafExpansionContext -> string seq) =
             [ ExpandLeafs expandLeafs ] @ state
 
         /// <summary>
@@ -606,11 +611,13 @@ module rec PlanBuilder =
                 | _ -> failwithf $"No selectors configured"
 
             let result =
-                { requiredProjects = Pipeline.findRequiredProjects dirs profile.includeRootDir selector |> Seq.toList
+                { requiredProjects =
+                    Pipeline.findRequiredProjects { filesByDir = dirs } profile.includeRootDir selector
+                    |> Seq.toList
                   changeSetRange = diffRange
                   changedDirs =
                     match mode with
-                    | Diff -> Some(dirs |> Seq.toList)
+                    | Diff -> Some dirs
                     | All -> None
                   changeKeys =
                     diffRange
