@@ -54,11 +54,12 @@ type PlanOutput =
       changeSetRange: ChangeSetRange option
       changedDirs: Map<string, string list> option }
 
-type SelectionContext = { filesByDir: Map<string, string seq> }
+type SelectionContext =
+    { filesByDir: Map<string, string list> }
 
 type DiffResult =
     { effectiveRange: ChangeSetRange
-      dirs: Map<string, string seq> }
+      dirs: Map<string, string list> }
 
 type SnapshotMode =
     | Write

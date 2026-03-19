@@ -19,7 +19,7 @@ module GitDiff =
     let pwd = Directory.GetCurrentDirectory()
     let git = CommandHelper.runSimpleGitCommand pwd
 
-    let allDirs (includeRootDir: bool) : Map<string, string seq> =
+    let allDirs (includeRootDir: bool) : Map<string, string list> =
         FileStatus.getAllFiles pwd
         |> Seq.map (fun (_, filePath) ->
             let dir = Path.GetRelativePath(pwd, (FileInfo filePath).Directory.FullName)
@@ -30,7 +30,7 @@ module GitDiff =
             else
                 pairs |> Seq.filter (fun (dir, _) -> dir <> ".")
         |> Seq.groupBy fst
-        |> Seq.map (fun (dir, pairs) -> dir, pairs |> Seq.map snd)
+        |> Seq.map (fun (dir, pairs) -> dir, pairs |> Seq.map snd |> Seq.toList)
         |> Map.ofSeq
 
     let dirsFromDiff (includeRootDir: bool) (fromRef: BaseCommitStrategy) (toRef: string option) : DiffResult =
@@ -75,7 +75,7 @@ module GitDiff =
                                 pairs |> Seq.filter (fun (dir, _) -> dir <> ".")
             }
             |> Seq.groupBy fst
-            |> Seq.map (fun (dir, pairs) -> dir, pairs |> Seq.map snd |> Seq.distinct)
+            |> Seq.map (fun (dir, pairs) -> dir, pairs |> Seq.map snd |> Seq.distinct |> Seq.toList)
             |> Map.ofSeq
 
         let info =

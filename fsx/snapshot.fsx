@@ -23,7 +23,7 @@ module Snapshot =
     let private baseName (output: PlanOutput) =
         match output.changeSetRange with
         | Some r ->
-            let baseHash = r.baseCommits |> List.head |> fun h -> h.[0..6]
+            let baseHash = r.baseCommits |> List.head |> (fun h -> h.[0..6])
             let currentHash = r.currentCommit.[0..6]
             $".dbt-{baseHash}-{currentHash}"
         | None -> ".dbt-all"
