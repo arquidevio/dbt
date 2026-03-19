@@ -40,8 +40,9 @@ module GitDiff =
                 let output = git $$"""show --no-patch --format="%P" {{currentCommit}}"""
                 output.Split ' ' |> Seq.toList
             | Override ref ->
-                Log.info $"Base revision override: {ref}"
-                [ ref ]
+                let resolved = (git $"rev-parse {ref}").Trim()
+                Log.info $"Base revision override: {ref} -> {resolved}"
+                [ resolved ]
             | MergeBase targetBranch ->
                 Log.info "%s" (git $"fetch origin {targetBranch}:refs/remotes/origin/{targetBranch}")
 
