@@ -4,7 +4,7 @@ namespace Arquidev.Dbt
 #load "log.fsx"
 #load "json.fsx"
 
-open Arquidev
+open Arquidev.Tools
 open System.IO
 
 type private SnapshotRecord =
@@ -35,7 +35,7 @@ module Snapshot =
         Path.Combine(Directory.GetCurrentDirectory(), $"{baseName output}.snapshot-miss.json")
 
     let apply (output: PlanOutput) =
-        let env = Env.get<{| DBT_SNAPSHOT: SnapshotMode option |}> ()
+        let env = readEnv<{| DBT_SNAPSHOT: SnapshotMode option |}> ()
 
         match env.DBT_SNAPSHOT with
         | None -> ()

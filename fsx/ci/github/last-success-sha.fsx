@@ -1,10 +1,9 @@
-#r "paket: nuget Arquidev.Fetch ~> 1.1.1
-           nuget Arquidev.Env ~> 1"
+#r "paket: nuget Arquidev.Fetch ~> 2
+           nuget Arquidev.Env ~> 2.0.1"
 
 namespace Arquidev.Dbt
 
-open Arquidev
-open Arquidev.Fetch
+open Arquidev.Tools
 
 type Step = { conclusion: string option }
 
@@ -59,7 +58,7 @@ module LastSuccessSha =
 
     let getLastSuccessCommitHash () =
 
-        let context = Env.get<{| GITHUB_ACTIONS: bool option |}> ()
+        let context = readEnv<{| GITHUB_ACTIONS: bool option |}> ()
 
         let result =
 
@@ -68,7 +67,7 @@ module LastSuccessSha =
             else
 
                 let env =
-                    Env.get<
+                    readEnv<
                         {| GITHUB_REPOSITORY: string
                            GITHUB_TOKEN: string
                            GITHUB_REF_NAME: string

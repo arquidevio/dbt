@@ -10,10 +10,10 @@ namespace Arquidev.Dbt
 
 #r "paket:
         nuget Microsoft.Extensions.FileSystemGlobbing ~> 10
-        nuget Arquidev.Env ~> 1
+        nuget Arquidev.Env ~> 2.0.1
 "
 
-open Arquidev
+open Arquidev.Tools
 open Arquidev.Dbt
 open Microsoft.Extensions.FileSystemGlobbing
 
@@ -536,7 +536,7 @@ module rec PlanBuilder =
 
         let env =
             Lazy<DbtEnv>(fun () ->
-                let env: DbtEnv = Env.get<DbtEnv> ()
+                let env: DbtEnv = readEnv<DbtEnv> ()
 
                 { env with
                     DBT_BASE_COMMIT =
