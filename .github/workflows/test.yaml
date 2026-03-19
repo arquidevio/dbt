@@ -9,14 +9,14 @@ jobs:
   compile:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 5
     # ---- DOTNET TOOLS RESTORE ---- #
 
     - name: Restore Dotnet Tools Cache
       id: cache-tools-restore
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       with:
         path: |
           ~/.nuget
@@ -27,7 +27,7 @@ jobs:
 
     - name: Save Dotnet Tools Cache
       id: cache-tools-save
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@v5
       with:
         path: |
           ~/.nuget
