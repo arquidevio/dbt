@@ -42,7 +42,7 @@ type Selector =
 and LeafExpansionContext =
     { selector: Selector
       projectPath: string
-      filesByDir: Map<string, string seq> }
+      filesByDir: Map<string, string list> }
 
 type ChangeSetRange =
     { baseCommits: string list
