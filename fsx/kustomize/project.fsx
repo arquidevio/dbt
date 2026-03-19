@@ -2,6 +2,8 @@
 #load "../plan.fsx"
 #load "../yaml.fsx"
 
+namespace Arquidev.Dbt
+
 [<RequireQualifiedAccess>]
 module KustomizeProject =
   open System.IO
