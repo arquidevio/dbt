@@ -11,12 +11,22 @@ module Json =
     let private DefaultOptions =
         JsonFSharpOptions.Default().WithSkippableOptionFields().ToJsonSerializerOptions()
 
+    let private PrettyOptions =
+        let o = JsonFSharpOptions.Default().WithSkippableOptionFields().ToJsonSerializerOptions()
+        o.WriteIndented <- true
+        o
 
     let write (value: 'a) : string =
         if FSharpType.IsFunction typeof<'a> then
             failwith "Cannot serialize function values"
         else
             JsonSerializer.Serialize(value, DefaultOptions)
+
+    let writePretty (value: 'a) : string =
+        if FSharpType.IsFunction typeof<'a> then
+            failwith "Cannot serialize function values"
+        else
+            JsonSerializer.Serialize(value, PrettyOptions)
 
     let read<'a> (value: string) : 'a =
         JsonSerializer.Deserialize<'a>(value, DefaultOptions)

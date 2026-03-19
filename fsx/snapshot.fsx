@@ -44,7 +44,7 @@ module Snapshot =
             Log.header "SNAPSHOT WRITE"
             let snap = toRecord output
             let path = filePath output
-            File.WriteAllText(path, Json.write snap)
+            File.WriteAllText(path, Json.writePretty snap)
             Log.info $"Snapshot written to: %s{path}"
 
         | Some Validate ->
@@ -62,6 +62,6 @@ module Snapshot =
                 Log.info "Snapshot matches current output"
             else
                 let missPath = missFilePath output
-                File.WriteAllText(missPath, Json.write current)
+                File.WriteAllText(missPath, Json.writePretty current)
                 Log.error $"Snapshot mismatch. Current output written to: %s{missPath}"
                 exit 1
