@@ -127,8 +127,10 @@ module Solution =
                     else
                         []
 
-                if isLeafProject proj then proj :: dependantResults
-                else dependantResults
+                if isLeafProject proj then
+                    proj :: dependantResults
+                else
+                    dependantResults
 
         find Set.empty projectPath |> Seq.distinct
 
