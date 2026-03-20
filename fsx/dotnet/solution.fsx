@@ -101,7 +101,7 @@ module Solution =
         (projectPath: string)
         =
         let rec find (sofar: string list) (proj: string) : string list =
-            if projs.ContainsKey(proj) && not <| isLeafProject proj then
+            if projs.ContainsKey(proj) && isLeafProject proj then
                 projs[proj] |> Seq.collect (find sofar) |> Seq.toList
             else
                 proj :: sofar
