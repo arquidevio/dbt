@@ -21,7 +21,7 @@ type ProjectMetadata =
 
 type Selector =
     { id: string
-      pattern: string
+      patterns: string list
       excludePatterns: string list
       discoveryRoot: string option
       isRequired: string -> bool
@@ -31,7 +31,7 @@ type Selector =
 
     static member internal Default =
         { id = "none"
-          pattern = "none"
+          patterns = []
           excludePatterns = []
           discoveryRoot = None
           isIgnored = fun _ -> false

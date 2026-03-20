@@ -88,12 +88,12 @@ module Pipeline =
             |> Option.defaultValue cwd
 
         Log.debug "discovery root: %s" discoveryRoot
-        Log.debug "pattern: %s" selector.pattern
+        Log.debug "patterns: %A" selector.patterns
         Log.debug "exclude: %A" selector.excludePatterns
 
         let findParentProjects =
             let projectMatcher = Matcher()
-            projectMatcher.AddInclude selector.pattern |> ignore
+            selector.patterns |> List.iter (fun p -> projectMatcher.AddInclude p |> ignore)
             let projectExcludeMatcher = Matcher()
             projectExcludeMatcher.AddInclude("**/*.*").AddExcludePatterns selector.excludePatterns
 
@@ -320,8 +320,9 @@ module rec PlanBuilder =
                 | SelectorId x -> Some x
                 | _ -> None)
 
-        let pattern =
-            tryPick (function
+        let patterns =
+            state
+            |> List.choose (function
                 | Pattern x -> Some x
                 | _ -> None)
 
@@ -354,7 +355,7 @@ module rec PlanBuilder =
         let output =
             Selector.Default
             |> fun s -> id |> Option.map (fun x -> { s with id = x }) |> Option.defaultValue s
-            |> fun s -> pattern |> Option.map (fun x -> { s with pattern = x }) |> Option.defaultValue s
+            |> fun s -> { s with patterns = s.patterns @ patterns }
             |> fun s ->
                 { s with
                     excludePatterns = s.excludePatterns @ excludes }
