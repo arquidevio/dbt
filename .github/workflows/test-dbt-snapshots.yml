@@ -1,0 +1,82 @@
+name: Validate test-dbt snapshots
+
+on:
+  push:
+    branches:
+      - '*'
+  pull_request:
+
+env:
+  TEST_DBT_REPO: queil/test-dbt
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout dbt
+        uses: actions/checkout@v4
+        with:
+          path: dbt
+
+      - name: Checkout test-dbt
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.TEST_DBT_REPO }}
+          path: test-dbt
+          fetch-depth: 0
+
+      # ---- DOTNET TOOLS RESTORE ---- #
+
+      - name: Restore nuget cache
+        id: cache-nuget-restore
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.nuget
+          key: ${{ runner.os }}-nuget-${{ hashFiles('dbt/.config/dotnet-tools.json') }}
+
+      - name: Install fsy
+        run: |
+          version=$(jq -r '.tools.fsy.version' dbt/.config/dotnet-tools.json)
+          dotnet tool install -g fsy --version "$version"
+
+      - name: Save nuget cache
+        id: cache-nuget-save
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.nuget
+          key: ${{ steps.cache-nuget-restore.outputs.cache-primary-key }}
+
+      - name: Validate snapshots
+        working-directory: test-dbt
+        run: |
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          failed=0
+          count=0
+
+          for snapshot in dbt-snapshots/.dbt-*.snapshot.json; do
+            filename=$(basename "$snapshot")
+            base=$(jq -r '.changeSetRange.baseCommits[0]' "$snapshot")
+            cur=$(jq -r '.changeSetRange.currentCommit' "$snapshot")
+
+            echo "=== [$((++count))] $filename ==="
+            echo "    base: $base"
+            echo "    cur:  $cur"
+
+            cp "$snapshot" "$filename"
+
+            if DBT_SNAPSHOT=validate DBT_MODE=diff \
+               DBT_BASE_COMMIT="$base" DBT_CURRENT_COMMIT="$cur" \
+               fsy run --force plan.fsx; then
+              echo "    OK"
+            else
+              echo "    FAIL"
+              failed=$((failed + 1))
+            fi
+
+            rm -f "$filename"
+          done
+
+          echo ""
+          echo "=== Results: $((count - failed))/$count passed ==="
+          exit $failed

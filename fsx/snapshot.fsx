@@ -7,18 +7,37 @@ namespace Arquidev.Dbt
 open Arquidev.Tools
 open System.IO
 
+/// Portable snapshot of a single selected project — no absolute paths.
+type private SnapshotProject =
+    { projectId: string
+      kind: string
+      fileName: string
+      relativePath: string
+      relativeDir: string
+      dir: string
+      dirSlug: string }
+
 type private SnapshotRecord =
     { changeSetRange: ChangeSetRange option
       changedDirs: Map<string, string list>
-      requiredProjects: ProjectMetadata list }
+      requiredProjects: SnapshotProject list }
 
 [<RequireQualifiedAccess>]
 module Snapshot =
 
+    let private toSnapshotProject (p: ProjectMetadata) : SnapshotProject =
+        { projectId = p.projectId
+          kind = p.kind
+          fileName = p.fileName
+          relativePath = p.relativePath
+          relativeDir = p.relativeDir
+          dir = p.dir
+          dirSlug = p.dirSlug }
+
     let private toRecord (output: PlanOutput) : SnapshotRecord =
         { changeSetRange = output.changeSetRange
           changedDirs = output.changedDirs |> Option.defaultValue Map.empty
-          requiredProjects = output.requiredProjects }
+          requiredProjects = output.requiredProjects |> List.map toSnapshotProject }
 
     let private baseName (output: PlanOutput) =
         match output.changeSetRange with
