@@ -3,11 +3,11 @@ name: Validate test-dbt snapshots
 on:
   push:
     branches:
-      - '*'
+      - main
   pull_request:
 
 env:
-  TEST_DBT_REPO: queil/test-dbt
+  TEST_DBT_REPO: arquidevio/test-dbt
 
 jobs:
   validate:
