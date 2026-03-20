@@ -50,14 +50,15 @@ module Pipeline =
     [<Literal>]
     let private NoProject = "(none)"
 
-    /// Find the closest ancestor dir of the originPath that contains a single file matching projectPattern
+    /// Find the closest ancestor dir of the originPath that contains files matching the project pattern.
+    /// Returns all matches found in the first directory that has any.
     let findParentProjectPath
         (rootDir: string)
         (projectMatcher: Matcher)
         (projectExcludeMatcher: Matcher)
         (includeRootDir: bool)
         (originPath: string)
-        : string option =
+        : string list =
 
         let rec findParentProj (path: string) =
 
@@ -70,11 +71,10 @@ module Pipeline =
             with
             | [] ->
                 match Directory.GetParent path with
-                | null -> None
-                | p when not includeRootDir && p.FullName = rootDir -> None
+                | null -> []
+                | p when not includeRootDir && p.FullName = rootDir -> []
                 | p -> findParentProj p.FullName
-            | [ proj ] -> Some(proj |> Path.GetFullPath)
-            | _ -> failwithf "Multiple project matches"
+            | matches -> matches |> List.map Path.GetFullPath
 
         findParentProj originPath
 
@@ -101,16 +101,19 @@ module Pipeline =
                 findParentProjectPath discoveryRoot projectMatcher projectExcludeMatcher includeRootDir
 
             if Log.debugEnabled () then
-                let logGroups groups =
-                    for parentProject, dirs in groups do
-                        Log.debug "Project: '%s'" (parentProject |> Option.defaultValue NoProject)
-                        dirs |> Seq.iter (Log.debug " - %s")
+                fun dirs ->
+                    let groups = dirs |> Seq.groupBy findParent |> Seq.toList
 
-                    groups
+                    for projects, changedDirs in groups do
+                        match projects with
+                        | [] -> Log.debug "Project: '%s'" NoProject
+                        | ps -> ps |> List.iter (Log.debug "Project: '%s'")
 
-                Seq.groupBy findParent >> logGroups >> Seq.choose fst
+                        changedDirs |> Seq.iter (Log.debug " - %s")
+
+                    groups |> Seq.collect fst
             else
-                Seq.choose findParent
+                Seq.collect findParent
 
         ctx.filesByDir
         |> Map.keys
