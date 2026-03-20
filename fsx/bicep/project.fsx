@@ -93,6 +93,7 @@ module BicepSelectors =
           |> Seq.filter (fun f ->
             let ext = Path.GetExtension(f)
             ext = ".bicep" || ext = ".bicepparam")
+          |> Seq.map Path.GetFullPath
           |> Seq.collect (BicepProject.findLeafDependants dependencyTree ctx.selector.isRequired)
           |> Seq.distinct)
       }
