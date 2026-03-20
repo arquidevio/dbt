@@ -75,6 +75,7 @@ module BicepSelectors =
     member _.generic =
       selector {
         id "bicep"
+        pattern "*.bicep"
         pattern "*.bicepparam"
         required_when (fun f -> Path.GetExtension(f) = ".bicepparam")
 
