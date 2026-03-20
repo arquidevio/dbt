@@ -15,20 +15,24 @@ module BicepProject =
 
   let private usingRef = Regex("""using\s+'([^']+\.bicep)'""", RegexOptions.Compiled)
 
+  let private importRef = Regex("""from\s+'([^']+\.bicep)'""", RegexOptions.Compiled)
+
   let parseImports (filePath: string) : string seq =
     let dir = Path.GetDirectoryName(filePath)
 
-    let pattern =
+    let patterns =
       match Path.GetExtension(filePath) with
-      | ".bicepparam" -> usingRef
-      | _ -> moduleRef
+      | ".bicepparam" -> [ usingRef ]
+      | _ -> [ moduleRef; importRef ]
 
     try
       File.ReadAllLines(filePath)
       |> Seq.collect (fun line ->
-        pattern.Matches(line)
-        |> Seq.cast<Match>
-        |> Seq.map (fun m -> Path.GetFullPath(Path.Combine(dir, m.Groups.[1].Value))))
+        patterns
+        |> Seq.collect (fun pattern ->
+          pattern.Matches(line)
+          |> Seq.cast<Match>
+          |> Seq.map (fun m -> Path.GetFullPath(Path.Combine(dir, m.Groups.[1].Value)))))
     with ex ->
       Log.warn "Failed to parse imports from %s: %s" filePath ex.Message
       Seq.empty
