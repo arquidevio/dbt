@@ -112,15 +112,24 @@ module Pipeline =
             else
                 Seq.choose findParent
 
-        ctx.filesByDir
-        |> Map.keys
-        |> findParentProjects
-        |> Seq.distinct
-        |> Seq.collect (fun projectPath ->
-            selector.expandLeafs
-                { selector = selector
-                  projectPath = projectPath
-                  filesByDir = ctx.filesByDir })
+        let expandedPaths =
+            if selector.globalExpand then
+                selector.expandLeafs
+                    { selector = selector
+                      projectPath = ""
+                      filesByDir = ctx.filesByDir }
+            else
+                ctx.filesByDir
+                |> Map.keys
+                |> findParentProjects
+                |> Seq.distinct
+                |> Seq.collect (fun projectPath ->
+                    selector.expandLeafs
+                        { selector = selector
+                          projectPath = projectPath
+                          filesByDir = ctx.filesByDir })
+
+        expandedPaths
         |> Seq.distinct
         |> Seq.filter (not << selector.isIgnored)
         |> Seq.toList
@@ -178,6 +187,7 @@ module rec PlanBuilder =
         | BaseSelector of SelectorFacet list
         | Pattern of string
         | Exclude of string
+        | GlobalExpand of bool
         | RequiredWhen of (string -> bool)
         | IgnoredWhen of (string -> bool)
         | ProjectId of (ProjectMetadata -> string)
@@ -287,6 +297,13 @@ module rec PlanBuilder =
         member inline _.ProjectId(state, projectId: ProjectMetadata -> string) = [ ProjectId projectId ] @ state
 
         /// <summary>
+        /// When true, expand_leafs is called once with the full change set instead of per-discovered-project.
+        /// Use for selectors where dependency traversal operates on the full set of changed files (e.g. bicep).
+        /// </summary>
+        [<CustomOperation("global_expand")>]
+        member inline _.GlobalExpand(state, value: bool) = [ GlobalExpand value ] @ state
+
+        /// <summary>
         /// Determines if/how to traverse dependency tree to determine the leaf projects
         /// </summary>
         /// <remarks>
@@ -347,6 +364,11 @@ module rec PlanBuilder =
                 | ProjectId f -> Some f
                 | _ -> None)
 
+        let globalExpand =
+            tryPick (function
+                | GlobalExpand x -> Some x
+                | _ -> None)
+
         let expandLeafs =
             tryPick (function
                 | ExpandLeafs f -> Some f
@@ -359,6 +381,10 @@ module rec PlanBuilder =
             |> fun s ->
                 { s with
                     excludePatterns = s.excludePatterns @ excludes }
+            |> fun s ->
+                globalExpand
+                |> Option.map (fun x -> { s with globalExpand = x })
+                |> Option.defaultValue s
             |> fun s ->
                 requiredWhen
                 |> Option.map (fun x -> { s with isRequired = x })

@@ -77,6 +77,7 @@ module BicepSelectors =
         id "bicep"
         pattern "*.bicep"
         pattern "*.bicepparam"
+        global_expand true
         required_when (fun f -> Path.GetExtension(f) = ".bicepparam")
 
         expand_leafs (fun ctx ->
