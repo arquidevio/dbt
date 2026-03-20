@@ -67,7 +67,7 @@ jobs:
 
             if DBT_SNAPSHOT=validate DBT_MODE=diff \
                DBT_BASE_COMMIT="$base" DBT_CURRENT_COMMIT="$cur" \
-               fsy run --force plan.fsx; then
+               fsy run plan.fsx; then
               echo "    OK"
             else
               echo "    FAIL"
