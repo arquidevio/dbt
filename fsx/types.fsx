@@ -24,7 +24,6 @@ type Selector =
       patterns: string list
       excludePatterns: string list
       discoveryRoot: string option
-      globalExpand: bool
       isRequired: string -> bool
       isIgnored: string -> bool
       projectId: ProjectMetadata -> string
@@ -35,7 +34,6 @@ type Selector =
           patterns = []
           excludePatterns = []
           discoveryRoot = None
-          globalExpand = false
           isIgnored = fun _ -> false
           isRequired = fun _ -> true
           projectId = fun p -> p.projectId
