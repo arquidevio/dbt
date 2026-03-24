@@ -6,10 +6,10 @@ open Arquidev.Dbt
 
 [<Tests>]
 let tests =
-    testList
-        "JSON serde"
-        [ test "Serializing a function should fail" {
-              "Should crash" |> Expect.throws (fun () -> Json.write (fun () -> ()) |> ignore)
-          } ]
+  testList
+    "JSON serde"
+    [ test "Serializing a function should fail" {
+        "Should crash" |> Expect.throws (fun () -> Json.write (fun () -> ()) |> ignore)
+      } ]
 
 runTestsWithCLIArgs [] [||] tests

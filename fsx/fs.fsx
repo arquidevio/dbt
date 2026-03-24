@@ -5,10 +5,10 @@ open System.IO
 [<RequireQualifiedAccess>]
 module Fs =
 
-    type WorkingDir(workingDir: string) =
-        let originalDir = Directory.GetCurrentDirectory()
-        do Directory.SetCurrentDirectory workingDir
+  type WorkingDir(workingDir: string) =
+    let originalDir = Directory.GetCurrentDirectory()
+    do Directory.SetCurrentDirectory workingDir
 
-        interface System.IDisposable with
-            member _.Dispose() : unit =
-                Directory.SetCurrentDirectory originalDir
+    interface System.IDisposable with
+      member _.Dispose() : unit =
+        Directory.SetCurrentDirectory originalDir

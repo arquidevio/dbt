@@ -10,29 +10,29 @@ open Arquidev.Tools
 [<AutoOpen>]
 module Output =
 
-    [<RequireQualifiedAccess>]
-    module Plan =
+  [<RequireQualifiedAccess>]
+  module Plan =
 
-        open System.IO
+    open System.IO
 
-        type GithubEnv =
-            { [<Env.Default("vars.env")>]
-              GITHUB_OUTPUT: string }
+    type GithubEnv =
+      { [<Env.Default("vars.env")>]
+        GITHUB_OUTPUT: string }
 
-        let internal env = Lazy<GithubEnv>(fun () -> readEnv<GithubEnv> ())
+    let internal env = Lazy<GithubEnv>(fun () -> readEnv<GithubEnv> ())
 
-        let appendToGithubOutput (key: string) (value: string) (planOutput: PlanOutput) =
+    let appendToGithubOutput (key: string) (value: string) (planOutput: PlanOutput) =
 
-            if key.Contains "=" then
-                failwithf "Key cannot contain '='"
+      if key.Contains "=" then
+        failwithf "Key cannot contain '='"
 
-            File.AppendAllLines(env.Value.GITHUB_OUTPUT, [ $"{key}={value}" ])
+      File.AppendAllLines(env.Value.GITHUB_OUTPUT, [ $"{key}={value}" ])
 
-            planOutput
+      planOutput
 
-        let appendToGithubOutputWith (key: string) (value: PlanOutput -> string) (planOutput: PlanOutput) =
-            planOutput |> appendToGithubOutput key (planOutput |> value)
+    let appendToGithubOutputWith (key: string) (value: PlanOutput -> string) (planOutput: PlanOutput) =
+      planOutput |> appendToGithubOutput key (planOutput |> value)
 
-        let appendToGithubOutputJson (key: string) (value: PlanOutput -> 'a) (planOutput: PlanOutput) =
-            let jsonVal = planOutput |> value |> Json.write
-            planOutput |> appendToGithubOutput key jsonVal
+    let appendToGithubOutputJson (key: string) (value: PlanOutput -> 'a) (planOutput: PlanOutput) =
+      let jsonVal = planOutput |> value |> Json.write
+      planOutput |> appendToGithubOutput key jsonVal

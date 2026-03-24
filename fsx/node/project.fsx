@@ -6,12 +6,12 @@ namespace Arquidev.Dbt
 [<AutoOpen>]
 module NodeSelectors =
 
-    type SelectorBuilderDefaults with
-        member _.node: Selectors = Selectors()
+  type SelectorBuilderDefaults with
+    member _.node: Selectors = Selectors()
 
-    and Selectors() =
-        member _.image =
-            selector {
-                id "node"
-                pattern "package.json"
-            }
+  and Selectors() =
+    member _.image =
+      selector {
+        id "node"
+        pattern "package.json"
+      }

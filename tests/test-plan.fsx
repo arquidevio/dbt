@@ -16,48 +16,48 @@ let testSelectorId = "test"
 let defaultSelectorId = "default"
 
 type ProjectMetadata with
-    static member Empty =
-        { projectId = ""
-          fileName = ""
-          fullPath = ""
-          fullDir = ""
-          dir = ""
-          dirSlug = ""
-          relativePath = ""
-          kind = ""
-          relativeDir = "" }
+  static member Empty =
+    { projectId = ""
+      fileName = ""
+      fullPath = ""
+      fullDir = ""
+      dir = ""
+      dirSlug = ""
+      relativePath = ""
+      kind = ""
+      relativeDir = "" }
 
 let mergeSelectorsExtend =
-    test "Merge selectors extend" {
-        let baseProfile =
-            profile {
-                selector {
-                    id "my-selector"
-                    pattern "*.json"
-                    exclude "green"
-                }
-            }
+  test "Merge selectors extend" {
+    let baseProfile =
+      profile {
+        selector {
+          id "my-selector"
+          pattern "*.json"
+          exclude "green"
+        }
+      }
 
-        let plan =
-            plan {
-                profile {
-                    include_root_dir true
-                    extend baseProfile
+    let plan =
+      plan {
+        profile {
+          include_root_dir true
+          extend baseProfile
 
-                    selector {
-                        pattern "*.toml"
-                        exclude "blue"
-                    }
-                }
-            }
+          selector {
+            pattern "*.toml"
+            exclude "blue"
+          }
+        }
+      }
 
 
-        let selector = plan.profiles.Value["default"].selector.Value
-        "Pattern should be *.toml" |> Expect.equal selector.pattern "*.toml"
+    let selector = plan.profiles.Value["default"].selector.Value
+    "Pattern should be *.toml" |> Expect.equal selector.pattern "*.toml"
 
-        "Excludes should be merged in the reverse order"
-        |> Expect.sequenceEqual selector.excludePatterns [ "blue"; "green" ]
-    }
+    "Excludes should be merged in the reverse order"
+    |> Expect.sequenceEqual selector.excludePatterns [ "blue"; "green" ]
+  }
 
 [<Tests>]
 let tests = [ mergeSelectorsExtend ] |> testList "Plan builder"

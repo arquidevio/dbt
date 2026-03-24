@@ -4,31 +4,31 @@ namespace Arquidev.Dbt
 
 [<RequireQualifiedAccess>]
 module Json =
-    open System.Text.Json
-    open System.Text.Json.Serialization
-    open Microsoft.FSharp.Reflection
+  open System.Text.Json
+  open System.Text.Json.Serialization
+  open Microsoft.FSharp.Reflection
 
-    let private DefaultOptions =
-        JsonFSharpOptions.Default().WithSkippableOptionFields().ToJsonSerializerOptions()
+  let private DefaultOptions =
+    JsonFSharpOptions.Default().WithSkippableOptionFields().ToJsonSerializerOptions()
 
-    let private PrettyOptions =
-        let o =
-            JsonFSharpOptions.Default().WithSkippableOptionFields().ToJsonSerializerOptions()
+  let private PrettyOptions =
+    let o =
+      JsonFSharpOptions.Default().WithSkippableOptionFields().ToJsonSerializerOptions()
 
-        o.WriteIndented <- true
-        o
+    o.WriteIndented <- true
+    o
 
-    let write (value: 'a) : string =
-        if FSharpType.IsFunction typeof<'a> then
-            failwith "Cannot serialize function values"
-        else
-            JsonSerializer.Serialize(value, DefaultOptions)
+  let write (value: 'a) : string =
+    if FSharpType.IsFunction typeof<'a> then
+      failwith "Cannot serialize function values"
+    else
+      JsonSerializer.Serialize(value, DefaultOptions)
 
-    let writePretty (value: 'a) : string =
-        if FSharpType.IsFunction typeof<'a> then
-            failwith "Cannot serialize function values"
-        else
-            JsonSerializer.Serialize(value, PrettyOptions)
+  let writePretty (value: 'a) : string =
+    if FSharpType.IsFunction typeof<'a> then
+      failwith "Cannot serialize function values"
+    else
+      JsonSerializer.Serialize(value, PrettyOptions)
 
-    let read<'a> (value: string) : 'a =
-        JsonSerializer.Deserialize<'a>(value, DefaultOptions)
+  let read<'a> (value: string) : 'a =
+    JsonSerializer.Deserialize<'a>(value, DefaultOptions)

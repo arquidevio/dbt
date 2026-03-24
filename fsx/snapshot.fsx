@@ -9,78 +9,78 @@ open System.IO
 
 /// Portable snapshot of a single selected project — no absolute paths.
 type private SnapshotProject =
-    { projectId: string
-      kind: string
-      fileName: string
-      relativePath: string
-      relativeDir: string
-      dir: string
-      dirSlug: string }
+  { projectId: string
+    kind: string
+    fileName: string
+    relativePath: string
+    relativeDir: string
+    dir: string
+    dirSlug: string }
 
 type private SnapshotRecord =
-    { changeSetRange: ChangeSetRange option
-      changedDirs: Map<string, string list>
-      requiredProjects: SnapshotProject list }
+  { changeSetRange: ChangeSetRange option
+    changedDirs: Map<string, string list>
+    requiredProjects: SnapshotProject list }
 
 [<RequireQualifiedAccess>]
 module Snapshot =
 
-    let private toSnapshotProject (p: ProjectMetadata) : SnapshotProject =
-        { projectId = p.projectId
-          kind = p.kind
-          fileName = p.fileName
-          relativePath = p.relativePath
-          relativeDir = p.relativeDir
-          dir = p.dir
-          dirSlug = p.dirSlug }
+  let private toSnapshotProject (p: ProjectMetadata) : SnapshotProject =
+    { projectId = p.projectId
+      kind = p.kind
+      fileName = p.fileName
+      relativePath = p.relativePath
+      relativeDir = p.relativeDir
+      dir = p.dir
+      dirSlug = p.dirSlug }
 
-    let private toRecord (output: PlanOutput) : SnapshotRecord =
-        { changeSetRange = output.changeSetRange
-          changedDirs = output.changedDirs |> Option.defaultValue Map.empty
-          requiredProjects = output.requiredProjects |> List.map toSnapshotProject }
+  let private toRecord (output: PlanOutput) : SnapshotRecord =
+    { changeSetRange = output.changeSetRange
+      changedDirs = output.changedDirs |> Option.defaultValue Map.empty
+      requiredProjects = output.requiredProjects |> List.map toSnapshotProject }
 
-    let private baseName (output: PlanOutput) =
-        match output.changeSetRange with
-        | Some r ->
-            let baseHash = r.baseCommits |> List.head |> (fun h -> h.[0..6])
-            let currentHash = r.currentCommit.[0..6]
-            $".dbt-{baseHash}-{currentHash}"
-        | None -> ".dbt-all"
+  let private baseName (output: PlanOutput) =
+    match output.changeSetRange with
+    | Some r ->
+      let baseHash = r.baseCommits |> List.head |> (fun h -> h.[0..6])
+      let currentHash = r.currentCommit.[0..6]
+      $".dbt-{baseHash}-{currentHash}"
+    | None -> ".dbt-all"
 
-    let private filePath (output: PlanOutput) =
-        Path.Combine(Directory.GetCurrentDirectory(), $"{baseName output}.snapshot.json")
+  let private filePath (output: PlanOutput) =
+    Path.Combine(Directory.GetCurrentDirectory(), $"{baseName output}.snapshot.json")
 
-    let private missFilePath (output: PlanOutput) =
-        Path.Combine(Directory.GetCurrentDirectory(), $"{baseName output}.snapshot-miss.json")
+  let private missFilePath (output: PlanOutput) =
+    Path.Combine(Directory.GetCurrentDirectory(), $"{baseName output}.snapshot-miss.json")
 
-    let apply (output: PlanOutput) =
-        let env = readEnv<{| DBT_SNAPSHOT: SnapshotMode option |}> ()
+  let apply (output: PlanOutput) =
+    let env = readEnv<{| DBT_SNAPSHOT: SnapshotMode option |}> ()
 
-        match env.DBT_SNAPSHOT with
-        | None -> ()
+    match env.DBT_SNAPSHOT with
+    | None -> ()
 
-        | Some Write ->
-            Log.header "SNAPSHOT WRITE"
-            let snap = toRecord output
-            let path = filePath output
-            File.WriteAllText(path, Json.writePretty snap)
-            Log.info $"Snapshot written to: %s{path}"
+    | Some Write ->
+      Log.header "SNAPSHOT WRITE"
+      let snap = toRecord output
+      let path = filePath output
+      File.WriteAllText(path, Json.writePretty snap)
+      Log.info $"Snapshot written to: %s{path}"
 
-        | Some Validate ->
-            Log.header "SNAPSHOT VALIDATE"
-            let path = filePath output
+    | Some Validate ->
+      Log.header "SNAPSHOT VALIDATE"
+      let path = filePath output
 
-            if not (File.Exists path) then
-                Log.error $"Snapshot file not found: %s{path}"
-                exit 1
+      if not (File.Exists path) then
+        Log.error $"Snapshot file not found: %s{path}"
+        exit 1
 
-            let saved = File.ReadAllText path |> Json.read<SnapshotRecord>
-            let current = toRecord output
+      let saved = File.ReadAllText path |> Json.read<SnapshotRecord>
+      let current = toRecord output
 
-            if saved = current then
-                Log.info "Snapshot matches current output"
-            else
-                let missPath = missFilePath output
-                File.WriteAllText(missPath, Json.writePretty current)
-                Log.error $"Snapshot mismatch. Current output written to: %s{missPath}"
-                exit 1
+      if saved = current then
+        Log.info "Snapshot matches current output"
+      else
+        let missPath = missFilePath output
+        File.WriteAllText(missPath, Json.writePretty current)
+        Log.error $"Snapshot mismatch. Current output written to: %s{missPath}"
+        exit 1
