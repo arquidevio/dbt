@@ -50,14 +50,15 @@ module Pipeline =
     [<Literal>]
     let private NoProject = "(none)"
 
-    /// Find the closest ancestor dir of the originPath that contains a single file matching projectPattern
+    /// Find the closest ancestor dir of the originPath that contains files matching the project pattern.
+    /// Returns all matches found in the first directory that has any.
     let findParentProjectPath
         (rootDir: string)
         (projectMatcher: Matcher)
         (projectExcludeMatcher: Matcher)
         (includeRootDir: bool)
         (originPath: string)
-        : string option =
+        : string list =
 
         let rec findParentProj (path: string) =
 
@@ -70,11 +71,10 @@ module Pipeline =
             with
             | [] ->
                 match Directory.GetParent path with
-                | null -> None
-                | p when not includeRootDir && p.FullName = rootDir -> None
+                | null -> []
+                | p when not includeRootDir && p.FullName = rootDir -> []
                 | p -> findParentProj p.FullName
-            | [ proj ] -> Some(proj |> Path.GetFullPath)
-            | _ -> failwithf "Multiple project matches"
+            | matches -> matches |> List.map Path.GetFullPath
 
         findParentProj originPath
 
@@ -88,12 +88,12 @@ module Pipeline =
             |> Option.defaultValue cwd
 
         Log.debug "discovery root: %s" discoveryRoot
-        Log.debug "pattern: %s" selector.pattern
+        Log.debug "patterns: %A" selector.patterns
         Log.debug "exclude: %A" selector.excludePatterns
 
         let findParentProjects =
             let projectMatcher = Matcher()
-            projectMatcher.AddInclude selector.pattern |> ignore
+            selector.patterns |> List.iter (fun p -> projectMatcher.AddInclude p |> ignore)
             let projectExcludeMatcher = Matcher()
             projectExcludeMatcher.AddInclude("**/*.*").AddExcludePatterns selector.excludePatterns
 
@@ -101,16 +101,19 @@ module Pipeline =
                 findParentProjectPath discoveryRoot projectMatcher projectExcludeMatcher includeRootDir
 
             if Log.debugEnabled () then
-                let logGroups groups =
-                    for parentProject, dirs in groups do
-                        Log.debug "Project: '%s'" (parentProject |> Option.defaultValue NoProject)
-                        dirs |> Seq.iter (Log.debug " - %s")
+                fun dirs ->
+                    let groups = dirs |> Seq.groupBy findParent |> Seq.toList
 
-                    groups
+                    for projects, changedDirs in groups do
+                        match projects with
+                        | [] -> Log.debug "Project: '%s'" NoProject
+                        | ps -> ps |> List.iter (Log.debug "Project: '%s'")
 
-                Seq.groupBy findParent >> logGroups >> Seq.choose fst
+                        changedDirs |> Seq.iter (Log.debug " - %s")
+
+                    groups |> Seq.collect fst
             else
-                Seq.choose findParent
+                Seq.collect findParent
 
         ctx.filesByDir
         |> Map.keys
@@ -320,8 +323,9 @@ module rec PlanBuilder =
                 | SelectorId x -> Some x
                 | _ -> None)
 
-        let pattern =
-            tryPick (function
+        let patterns =
+            state
+            |> List.choose (function
                 | Pattern x -> Some x
                 | _ -> None)
 
@@ -354,7 +358,7 @@ module rec PlanBuilder =
         let output =
             Selector.Default
             |> fun s -> id |> Option.map (fun x -> { s with id = x }) |> Option.defaultValue s
-            |> fun s -> pattern |> Option.map (fun x -> { s with pattern = x }) |> Option.defaultValue s
+            |> fun s -> { s with patterns = s.patterns @ patterns }
             |> fun s ->
                 { s with
                     excludePatterns = s.excludePatterns @ excludes }
