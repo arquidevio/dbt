@@ -81,7 +81,7 @@ module Pipeline =
   let findRequiredProjects (ctx: SelectionContext) (includeRootDir: bool) (selector: Selector) =
 
     let discoveryRoot =
-      let cwd = Directory.GetCurrentDirectory()
+      let cwd = GitDiff.pwd()
 
       selector.discoveryRoot
       |> Option.map (fun path -> Path.Combine(cwd, path))
@@ -139,7 +139,7 @@ module Pipeline =
     |> Seq.filter selector.isRequired
     |> Seq.map (fun p ->
       let file = FileInfo p
-      let cwd = Directory.GetCurrentDirectory()
+      let cwd = GitDiff.pwd()
       let relativeDir = Path.GetRelativePath(cwd, file.DirectoryName)
 
       let output =
