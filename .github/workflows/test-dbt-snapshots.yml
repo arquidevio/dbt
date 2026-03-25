@@ -65,18 +65,19 @@ jobs:
             echo "    base:    $base"
             echo "    cur:     $cur"
 
-            cp "$snapshot" "$filename"
-
             if DBT_SNAPSHOT=validate DBT_MODE=diff DBT_PROFILE="$profile" \
                DBT_BASE_COMMIT="$base" DBT_CURRENT_COMMIT="$cur" \
+               DBT_SNAPSHOT_DIR="$(pwd)/dbt-snapshots" \
                fsy run plan.fsx; then
               echo "    OK"
             else
               echo "    FAIL"
               failed=$((failed + 1))
+              miss="${snapshot%.snapshot.json}.snapshot-miss.json"
+              if [ -f "$miss" ]; then
+                git diff --no-index "$snapshot" "$miss" || true
+              fi
             fi
-
-            rm -f "$filename"
           done
 
           echo ""
