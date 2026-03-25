@@ -35,9 +35,17 @@ module Snapshot =
       dirSlug = p.dirSlug }
 
   let private toRecord (output: PlanOutput) : SnapshotRecord =
-    { changeSetRange = output.changeSetRange
-      changedDirs = output.changedDirs |> Option.defaultValue Map.empty
-      requiredProjects = output.requiredProjects |> List.map toSnapshotProject }
+    { changeSetRange =
+        output.changeSetRange
+        |> Option.map (fun r -> { r with baseCommits = r.baseCommits |> List.sort })
+      changedDirs =
+        output.changedDirs
+        |> Option.defaultValue Map.empty
+        |> Map.map (fun _ files -> files |> List.sort)
+      requiredProjects =
+        output.requiredProjects
+        |> List.map toSnapshotProject
+        |> List.sortBy (fun p -> p.relativePath) }
 
   let private baseName (profile: string) (output: PlanOutput) =
     match output.changeSetRange with
