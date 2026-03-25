@@ -16,7 +16,7 @@ type BaseCommitStrategy =
 [<RequireQualifiedAccess>]
 module GitDiff =
 
-  let pwd () =
+  let private pwd () =
     CommandHelper.runSimpleGitCommand (Directory.GetCurrentDirectory()) $"rev-parse --show-toplevel"
 
   let allDirs (includeRootDir: bool) : Map<string, string list> =
