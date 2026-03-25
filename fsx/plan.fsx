@@ -653,6 +653,8 @@ module rec PlanBuilder =
 
       Log.trace "%A" result
 
+      Snapshot.apply result
+
       if result.requiredProjects.Length = 0 then
         Log.info "No project changes. Exiting"
 #if !INTERACTIVE
@@ -660,8 +662,6 @@ module rec PlanBuilder =
 #endif
       for action in profile.postActions do
         action result
-
-      Snapshot.apply result
 
       result
 
