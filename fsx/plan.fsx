@@ -182,6 +182,7 @@ module rec PlanBuilder =
     | BaseSelector of SelectorFacet list
     | Pattern of string
     | Exclude of string
+    | DiscoveryRoot of string
     | RequiredWhen of (string -> bool)
     | IgnoredWhen of (string -> bool)
     | ProjectId of (ProjectMetadata -> string)
@@ -286,6 +287,12 @@ module rec PlanBuilder =
     member inline _.IgnoredWhen(state, isIgnored: string -> bool) = [ IgnoredWhen isIgnored ] @ state
 
     /// <summary>
+    /// Overrides the root directory used for project discovery (default: cwd)
+    /// </summary>
+    [<CustomOperation("discovery_root")>]
+    member inline _.DiscoveryRoot(state, path: string) = [ DiscoveryRoot path ] @ state
+
+    /// <summary>
     /// Overrides the default project id generation function
     /// </summary
     [<CustomOperation("project_id")>]
@@ -352,6 +359,11 @@ module rec PlanBuilder =
         | ProjectId f -> Some f
         | _ -> None)
 
+    let discoveryRoot =
+      tryPick (function
+        | DiscoveryRoot x -> Some x
+        | _ -> None)
+
     let expandLeafs =
       tryPick (function
         | ExpandLeafs f -> Some f
@@ -360,6 +372,7 @@ module rec PlanBuilder =
     let output =
       Selector.Default
       |> fun s -> id |> Option.map (fun x -> { s with id = x }) |> Option.defaultValue s
+      |> fun s -> discoveryRoot |> Option.map (fun x -> { s with discoveryRoot = Some x }) |> Option.defaultValue s
       |> fun s ->
           { s with
               patterns = s.patterns @ patterns }
