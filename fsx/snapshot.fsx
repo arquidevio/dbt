@@ -47,15 +47,20 @@ module Snapshot =
       $".dbt-{profile}-{baseHash}-{currentHash}"
     | None -> $".dbt-{profile}-all"
 
-  let private filePath (profile: string) (output: PlanOutput) =
-    Path.Combine(Directory.GetCurrentDirectory(), $"{baseName profile output}.snapshot.json")
+  let private filePath (dir: string) (profile: string) (output: PlanOutput) =
+    Path.Combine(dir, $"{baseName profile output}.snapshot.json")
 
-  let private missFilePath (profile: string) (output: PlanOutput) =
-    Path.Combine(Directory.GetCurrentDirectory(), $"{baseName profile output}.snapshot-miss.json")
+  let private missFilePath (dir: string) (profile: string) (output: PlanOutput) =
+    Path.Combine(dir, $"{baseName profile output}.snapshot-miss.json")
 
   let apply (output: PlanOutput) =
-    let env = readEnv<{| DBT_SNAPSHOT: SnapshotMode option; DBT_PROFILE: string option |}> ()
+    let env =
+      readEnv<{| DBT_SNAPSHOT: SnapshotMode option
+                 DBT_PROFILE: string option
+                 DBT_SNAPSHOT_DIR: string option |}> ()
+
     let profile = env.DBT_PROFILE |> Option.defaultValue "default"
+    let dir = env.DBT_SNAPSHOT_DIR |> Option.defaultWith Directory.GetCurrentDirectory
 
     match env.DBT_SNAPSHOT with
     | None -> ()
@@ -63,13 +68,13 @@ module Snapshot =
     | Some Write ->
       Log.header "SNAPSHOT WRITE"
       let snap = toRecord output
-      let path = filePath profile output
+      let path = filePath dir profile output
       File.WriteAllText(path, Json.writePretty snap)
       Log.info $"Snapshot written to: %s{path}"
 
     | Some Validate ->
       Log.header "SNAPSHOT VALIDATE"
-      let path = filePath profile output
+      let path = filePath dir profile output
 
       if not (File.Exists path) then
         Log.error $"Snapshot file not found: %s{path}"
@@ -81,7 +86,7 @@ module Snapshot =
       if saved = current then
         Log.info "Snapshot matches current output"
       else
-        let missPath = missFilePath profile output
+        let missPath = missFilePath dir profile output
         File.WriteAllText(missPath, Json.writePretty current)
         Log.error $"Snapshot mismatch. Current output written to: %s{missPath}"
         exit 1
