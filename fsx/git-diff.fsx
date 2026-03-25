@@ -94,7 +94,7 @@ module GitDiff =
     let dirs =
       dirs
       |> Map.filter (fun dir _ ->
-        if Directory.Exists dir then
+        if Path.Combine(cwd, dir) |> Directory.Exists then
           true
         else
           Log.warn $"WARNING: path '%s{dir}' no longer exists in the repository. Ignoring."
