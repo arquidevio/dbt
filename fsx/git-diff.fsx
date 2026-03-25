@@ -16,15 +16,13 @@ type BaseCommitStrategy =
 [<RequireQualifiedAccess>]
 module GitDiff =
 
-  let private pwd () =
-    CommandHelper.runSimpleGitCommand (Directory.GetCurrentDirectory()) $"rev-parse --show-toplevel"
+  let pwd = Directory.GetCurrentDirectory()
+  let git = CommandHelper.runSimpleGitCommand pwd
 
   let allDirs (includeRootDir: bool) : Map<string, string list> =
-    let cwd = pwd ()
-
-    FileStatus.getAllFiles cwd
+    FileStatus.getAllFiles pwd
     |> Seq.map (fun (_, filePath) ->
-      let dir = Path.GetRelativePath(cwd, (FileInfo filePath).Directory.FullName)
+      let dir = Path.GetRelativePath(pwd, (FileInfo filePath).Directory.FullName)
       dir, filePath)
     |> fun pairs ->
         if includeRootDir then
@@ -36,8 +34,6 @@ module GitDiff =
     |> Map.ofSeq
 
   let dirsFromDiff (includeRootDir: bool) (fromRef: BaseCommitStrategy) (toRef: string option) : DiffResult =
-    let cwd = pwd ()
-    let git = CommandHelper.runSimpleGitCommand cwd
 
     let currentCommit = toRef |> Option.defaultWith (fun () -> git "rev-parse HEAD")
     let baseCommit = fromRef
@@ -68,9 +64,9 @@ module GitDiff =
       seq {
         for baseRef in baseRefs do
           yield!
-            FileStatus.getChangedFiles cwd currentCommit baseRef
+            FileStatus.getChangedFiles pwd currentCommit baseRef
             |> Seq.map (fun (_, filePath) ->
-              let dir = Path.GetRelativePath(cwd, (FileInfo filePath).Directory.FullName)
+              let dir = Path.GetRelativePath(pwd, (FileInfo filePath).Directory.FullName)
               dir, filePath)
             |> fun pairs ->
                 if includeRootDir then
