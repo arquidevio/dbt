@@ -56,16 +56,18 @@ jobs:
 
           for snapshot in dbt-snapshots/.dbt-*.snapshot.json; do
             filename=$(basename "$snapshot")
+            profile=$(echo "$filename" | sed 's/\.dbt-\([^-]*\)-.*/\1/')
             base=$(jq -r '.changeSetRange.baseCommits[0]' "$snapshot")
             cur=$(jq -r '.changeSetRange.currentCommit' "$snapshot")
 
             echo "=== [$((++count))] $filename ==="
-            echo "    base: $base"
-            echo "    cur:  $cur"
+            echo "    profile: $profile"
+            echo "    base:    $base"
+            echo "    cur:     $cur"
 
             cp "$snapshot" "$filename"
 
-            if DBT_SNAPSHOT=validate DBT_MODE=diff \
+            if DBT_SNAPSHOT=validate DBT_MODE=diff DBT_PROFILE="$profile" \
                DBT_BASE_COMMIT="$base" DBT_CURRENT_COMMIT="$cur" \
                fsy run plan.fsx; then
               echo "    OK"
