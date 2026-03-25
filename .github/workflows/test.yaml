@@ -39,4 +39,5 @@ jobs:
       run: |
         dotnet fsy -v run --force tests/test.fsx
         dotnet fsy -v run --force tests/test-json.fsx
+        dotnet fsy -v run --force tests/test-plan.fsx
         dotnet fsy -v run --force tests/ci/test-last-success-sha.fsx

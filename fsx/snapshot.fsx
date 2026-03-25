@@ -39,22 +39,23 @@ module Snapshot =
       changedDirs = output.changedDirs |> Option.defaultValue Map.empty
       requiredProjects = output.requiredProjects |> List.map toSnapshotProject }
 
-  let private baseName (output: PlanOutput) =
+  let private baseName (profile: string) (output: PlanOutput) =
     match output.changeSetRange with
     | Some r ->
       let baseHash = r.baseCommits |> List.head |> (fun h -> h.[0..6])
       let currentHash = r.currentCommit.[0..6]
-      $".dbt-{baseHash}-{currentHash}"
-    | None -> ".dbt-all"
+      $".dbt-{profile}-{baseHash}-{currentHash}"
+    | None -> $".dbt-{profile}-all"
 
-  let private filePath (output: PlanOutput) =
-    Path.Combine(Directory.GetCurrentDirectory(), $"{baseName output}.snapshot.json")
+  let private filePath (profile: string) (output: PlanOutput) =
+    Path.Combine(Directory.GetCurrentDirectory(), $"{baseName profile output}.snapshot.json")
 
-  let private missFilePath (output: PlanOutput) =
-    Path.Combine(Directory.GetCurrentDirectory(), $"{baseName output}.snapshot-miss.json")
+  let private missFilePath (profile: string) (output: PlanOutput) =
+    Path.Combine(Directory.GetCurrentDirectory(), $"{baseName profile output}.snapshot-miss.json")
 
   let apply (output: PlanOutput) =
-    let env = readEnv<{| DBT_SNAPSHOT: SnapshotMode option |}> ()
+    let env = readEnv<{| DBT_SNAPSHOT: SnapshotMode option; DBT_PROFILE: string option |}> ()
+    let profile = env.DBT_PROFILE |> Option.defaultValue "default"
 
     match env.DBT_SNAPSHOT with
     | None -> ()
@@ -62,13 +63,13 @@ module Snapshot =
     | Some Write ->
       Log.header "SNAPSHOT WRITE"
       let snap = toRecord output
-      let path = filePath output
+      let path = filePath profile output
       File.WriteAllText(path, Json.writePretty snap)
       Log.info $"Snapshot written to: %s{path}"
 
     | Some Validate ->
       Log.header "SNAPSHOT VALIDATE"
-      let path = filePath output
+      let path = filePath profile output
 
       if not (File.Exists path) then
         Log.error $"Snapshot file not found: %s{path}"
@@ -80,7 +81,7 @@ module Snapshot =
       if saved = current then
         Log.info "Snapshot matches current output"
       else
-        let missPath = missFilePath output
+        let missPath = missFilePath profile output
         File.WriteAllText(missPath, Json.writePretty current)
         Log.error $"Snapshot mismatch. Current output written to: %s{missPath}"
         exit 1
