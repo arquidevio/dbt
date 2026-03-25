@@ -19,6 +19,7 @@ type ProjectMetadata with
   static member Empty =
     { projectId = ""
       fileName = ""
+      fileNameNoExtension = ""
       fullPath = ""
       fullDir = ""
       dir = ""
@@ -51,16 +52,49 @@ let mergeSelectorsExtend =
         }
       }
 
-
     let selector = plan.profiles.Value["default"].selector.Value
-    "Pattern should be *.toml" |> Expect.equal selector.pattern "*.toml"
+
+    "Patterns should contain both without duplication"
+    |> Expect.containsAll selector.patterns [ "*.json"; "*.toml" ]
+
+    "Patterns should not be duplicated"
+    |> Expect.equal selector.patterns.Length 2
 
     "Excludes should be merged in the reverse order"
     |> Expect.sequenceEqual selector.excludePatterns [ "blue"; "green" ]
   }
 
+let extendDoesNotDuplicatePatterns =
+  test "Extend does not duplicate patterns" {
+    let baseSelector =
+      selector {
+        id "base"
+        pattern "*.bicep"
+        pattern "*.bicepparam"
+      }
+
+    let derived =
+      plan {
+        profile {
+          selector {
+            extend baseSelector
+          }
+        }
+      }
+
+    let patterns = derived.profiles.Value["default"].selector.Value.patterns
+
+    "Each pattern should appear exactly once"
+    |> Expect.containsAll patterns [ "*.bicep"; "*.bicepparam" ]
+
+    "Patterns should not be duplicated"
+    |> Expect.equal patterns.Length 2
+  }
+
 [<Tests>]
-let tests = [ mergeSelectorsExtend ] |> testList "Plan builder"
+let tests =
+  [ mergeSelectorsExtend; extendDoesNotDuplicatePatterns ]
+  |> testList "Plan builder"
 
 
 runTestsWithCLIArgs [] [||] tests

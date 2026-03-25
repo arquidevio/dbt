@@ -223,6 +223,7 @@ module rec PlanBuilder =
         | Some b, None -> baseState @ SelectorId b :: state
         | _ -> failwithf "Invalid extend config"
 
+    let output = output |> List.filter (function | BaseSelector _ -> false | _ -> true)
     Log.trace "SELECTOR BUILDER RUN: %A -> %A" state output
     output
 
