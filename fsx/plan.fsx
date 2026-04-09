@@ -91,11 +91,12 @@ module Pipeline =
     Log.debug "patterns: %A" selector.patterns
     Log.debug "exclude: %A" selector.excludePatterns
 
+    let projectMatcher = Matcher()
+    selector.patterns |> List.iter (fun p -> projectMatcher.AddInclude p |> ignore)
+    let projectExcludeMatcher = Matcher()
+    projectExcludeMatcher.AddInclude("**/*.*").AddExcludePatterns selector.excludePatterns
+
     let findParentProjects =
-      let projectMatcher = Matcher()
-      selector.patterns |> List.iter (fun p -> projectMatcher.AddInclude p |> ignore)
-      let projectExcludeMatcher = Matcher()
-      projectExcludeMatcher.AddInclude("**/*.*").AddExcludePatterns selector.excludePatterns
 
       let findParent =
         findParentProjectPath discoveryRoot projectMatcher projectExcludeMatcher includeRootDir
@@ -124,6 +125,7 @@ module Pipeline =
         { selector = selector
           projectPath = projectPath
           filesByDir = ctx.filesByDir })
+    |> Seq.filter (fun p -> (projectExcludeMatcher.Match p).HasMatches)
     |> Seq.distinct
     |> Seq.filter (not << selector.isIgnored)
     |> Seq.toList
@@ -224,7 +226,12 @@ module rec PlanBuilder =
         | Some b, None -> baseState @ SelectorId b :: state
         | _ -> failwithf "Invalid extend config"
 
-    let output = output |> List.filter (function | BaseSelector _ -> false | _ -> true)
+    let output =
+      output
+      |> List.filter (function
+        | BaseSelector _ -> false
+        | _ -> true)
+
     Log.trace "SELECTOR BUILDER RUN: %A -> %A" state output
     output
 
@@ -372,7 +379,10 @@ module rec PlanBuilder =
     let output =
       Selector.Default
       |> fun s -> id |> Option.map (fun x -> { s with id = x }) |> Option.defaultValue s
-      |> fun s -> discoveryRoot |> Option.map (fun x -> { s with discoveryRoot = Some x }) |> Option.defaultValue s
+      |> fun s ->
+          discoveryRoot
+          |> Option.map (fun x -> { s with discoveryRoot = Some x })
+          |> Option.defaultValue s
       |> fun s ->
           { s with
               patterns = s.patterns @ patterns }

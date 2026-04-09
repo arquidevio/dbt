@@ -37,7 +37,9 @@ module Snapshot =
   let private toRecord (output: PlanOutput) : SnapshotRecord =
     { changeSetRange =
         output.changeSetRange
-        |> Option.map (fun r -> { r with baseCommits = r.baseCommits |> List.sort })
+        |> Option.map (fun r ->
+          { r with
+              baseCommits = r.baseCommits |> List.sort })
       changedDirs =
         output.changedDirs
         |> Option.defaultValue Map.empty
@@ -63,9 +65,11 @@ module Snapshot =
 
   let apply (output: PlanOutput) =
     let env =
-      readEnv<{| DBT_SNAPSHOT: SnapshotMode option
-                 DBT_PROFILE: string option
-                 DBT_SNAPSHOT_DIR: string option |}> ()
+      readEnv<
+        {| DBT_SNAPSHOT: SnapshotMode option
+           DBT_PROFILE: string option
+           DBT_SNAPSHOT_DIR: string option |}
+       > ()
 
     let profile = env.DBT_PROFILE |> Option.defaultValue "default"
     let dir = env.DBT_SNAPSHOT_DIR |> Option.defaultWith Directory.GetCurrentDirectory

@@ -57,8 +57,7 @@ let mergeSelectorsExtend =
     "Patterns should contain both without duplication"
     |> Expect.containsAll selector.patterns [ "*.json"; "*.toml" ]
 
-    "Patterns should not be duplicated"
-    |> Expect.equal selector.patterns.Length 2
+    "Patterns should not be duplicated" |> Expect.equal selector.patterns.Length 2
 
     "Excludes should be merged in the reverse order"
     |> Expect.sequenceEqual selector.excludePatterns [ "blue"; "green" ]
@@ -73,22 +72,14 @@ let extendDoesNotDuplicatePatterns =
         pattern "*.bicepparam"
       }
 
-    let derived =
-      plan {
-        profile {
-          selector {
-            extend baseSelector
-          }
-        }
-      }
+    let derived = plan { profile { selector { extend baseSelector } } }
 
     let patterns = derived.profiles.Value["default"].selector.Value.patterns
 
     "Each pattern should appear exactly once"
     |> Expect.containsAll patterns [ "*.bicep"; "*.bicepparam" ]
 
-    "Patterns should not be duplicated"
-    |> Expect.equal patterns.Length 2
+    "Patterns should not be duplicated" |> Expect.equal patterns.Length 2
   }
 
 [<Tests>]
