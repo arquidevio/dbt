@@ -1,0 +1,98 @@
+name: test-github-output
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore Dotnet Tools Cache
+        id: cache-tools-restore
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.nuget
+          key: ${{ runner.os }}-dotnet-${{ hashFiles('**/.config/dotnet-tools.json') }}
+
+      - name: Restore Dotnet Tools
+        run: dotnet tool restore
+
+      - name: Save Dotnet Tools Cache
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.nuget
+          key: ${{ steps.cache-tools-restore.outputs.cache-primary-key }}
+
+      # Writes one UpdateSpec JSON per test case to $GITHUB_OUTPUT.
+      # Also dumps the raw file so we can inspect what was actually written.
+      - name: write-outputs
+        id: write-outputs
+        run: |
+          dotnet fsy run tests/ci/test-github-output.fsx
+          echo "--- raw GITHUB_OUTPUT ---"
+          cat "$GITHUB_OUTPUT"
+          echo ""
+          echo "--- GITHUB_OUTPUT total bytes: $(wc -c < "$GITHUB_OUTPUT") ---"
+
+      # Passes outputs via env vars (safe – value is never injected into the script text).
+      # We compare the change_keys count the runner delivered against what we wrote.
+      - name: verify-outputs
+        env:
+          SPEC_SMALL: ${{ steps.write-outputs.outputs.spec-small }}
+          SPEC_MEDIUM: ${{ steps.write-outputs.outputs.spec-medium }}
+          SPEC_LARGE: ${{ steps.write-outputs.outputs.spec-large }}
+          SPEC_XLARGE: ${{ steps.write-outputs.outputs.spec-xlarge }}
+          EXPECTED_SMALL: ${{ steps.write-outputs.outputs.expected-small }}
+          EXPECTED_MEDIUM: ${{ steps.write-outputs.outputs.expected-medium }}
+          EXPECTED_LARGE: ${{ steps.write-outputs.outputs.expected-large }}
+          EXPECTED_XLARGE: ${{ steps.write-outputs.outputs.expected-xlarge }}
+          JSON_LEN_SMALL: ${{ steps.write-outputs.outputs.json-len-small }}
+          JSON_LEN_MEDIUM: ${{ steps.write-outputs.outputs.json-len-medium }}
+          JSON_LEN_LARGE: ${{ steps.write-outputs.outputs.json-len-large }}
+          JSON_LEN_XLARGE: ${{ steps.write-outputs.outputs.json-len-xlarge }}
+        run: |
+          failed=0
+
+          verify() {
+            local label="$1"
+            local spec="$2"
+            local expected="$3"
+            local written_len="$4"
+            local received_len=${#spec}
+
+            if [ -z "$spec" ]; then
+              echo "[$label] FAIL: output is empty (runner may have dropped the value)"
+              failed=$((failed + 1))
+              return
+            fi
+
+            if [ "$received_len" -ne "$written_len" ]; then
+              echo "[$label] TRUNCATED: written=${written_len}B received=${received_len}B (delta=$((written_len - received_len))B)"
+            fi
+
+            local actual
+            actual=$(echo "$spec" | jq '.change_keys | length' 2>&1) || {
+              echo "[$label] FAIL: invalid JSON (written=${written_len}B received=${received_len}B)"
+              echo "  tail of received value: ...${spec: -120}"
+              failed=$((failed + 1))
+              return
+            }
+
+            if [ "$actual" -eq "$expected" ]; then
+              echo "[$label] OK: change_keys=$actual written=${written_len}B received=${received_len}B"
+            else
+              echo "[$label] FAIL: expected=$expected actual=$actual written=${written_len}B received=${received_len}B"
+              echo "  tail of received value: ...${spec: -120}"
+              failed=$((failed + 1))
+            fi
+          }
+
+          verify "small  (10 keys /   5 imgs)" "$SPEC_SMALL"  "$EXPECTED_SMALL"  "$JSON_LEN_SMALL"
+          verify "medium (100 keys /  50 imgs)" "$SPEC_MEDIUM" "$EXPECTED_MEDIUM" "$JSON_LEN_MEDIUM"
+          verify "large  (500 keys / 200 imgs)" "$SPEC_LARGE"  "$EXPECTED_LARGE"  "$JSON_LEN_LARGE"
+          verify "xlarge (1k keys  / 500 imgs)" "$SPEC_XLARGE" "$EXPECTED_XLARGE" "$JSON_LEN_XLARGE"
+
+          exit $failed
