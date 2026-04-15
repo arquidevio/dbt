@@ -129,7 +129,7 @@ module Git =
             | _ -> failwithf "Not an SSH repo URL: %s" url.Head
 
         member _.ParseCommitMessage (startCommit: string) (endCommit: string) (regexp: string) =
-            Log.trace $"Parsing commit mesages from range: {startCommit}..{endCommit}. Regexp: ${regexp}"
+            Log.trace $"Parsing commit mesages from range: {startCommit}..{endCommit}. Regexp: {regexp}"
 
             let lines =
                 Git.CommandHelper.getGitResult repoDir $"--no-pager log --pretty=%%B %s{startCommit}..%s{endCommit}"
