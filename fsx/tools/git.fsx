@@ -135,6 +135,7 @@ module Git =
                 Git.CommandHelper.getGitResult repoDir $"--no-pager log --pretty=%%B %s{startCommit}..%s{endCommit}"
 
             if Log.traceEnabled () then
+                Log.trace $"Read: {lines |> List.length}"
                 lines |> Seq.iter (printfn "%s")
 
             lines

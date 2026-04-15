@@ -24,7 +24,7 @@ module Log =
 
     let debugEnabled () = currentLevel >= LogLevel.debug
     let traceEnabled () = currentLevel >= LogLevel.trace
-    
+
     let enableTrace (enable: bool) =
         if enable then
             currentLevel <- LogLevel.trace
