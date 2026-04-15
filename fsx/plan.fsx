@@ -625,10 +625,10 @@ module rec PlanBuilder =
                         profile.changeKeyPrefixRegex
                         |> Option.map (fun (regex, _) ->
                             r.baseCommits
-                            |> Seq.collect (fun baseCommit ->
+                            |> List.collect (fun baseCommit ->
                                 Git.Repo(".").ParseCommitMessage baseCommit r.currentCommit regex)
-                            |> Seq.distinct
-                            |> Seq.toList))
+                            |> List.distinct
+                            |> List.sort))
                     |> Option.flatten }
 
             Log.trace "%A" result

@@ -3,6 +3,7 @@
 "
 
 #load "../regex.fsx"
+#load "../log.fsx"
 
 namespace Arquidev.Dbt
 
@@ -128,12 +129,21 @@ module Git =
             | _ -> failwithf "Not an SSH repo URL: %s" url.Head
 
         member _.ParseCommitMessage (startCommit: string) (endCommit: string) (regexp: string) =
-            Git.CommandHelper.getGitResult repoDir $"--no-pager log --pretty=%%B %s{startCommit}..%s{endCommit}"
+            Log.trace $"Parsing commit mesages from range: {startCommit}..{endCommit}. Regexp: ${regexp}"
+
+            let lines =
+                Git.CommandHelper.getGitResult repoDir $"--no-pager log --pretty=%%B %s{startCommit}..%s{endCommit}"
+
+            if Log.traceEnabled () then
+                lines |> Seq.iter (printfn "%s")
+
+            lines
             |> List.choose (function
                 | ParseRegex regexp value -> Some value
                 | _ -> None)
-            |> Seq.concat
-            |> Seq.distinct
+            |> List.concat
+            |> List.distinct
+            |> List.sort
 
         member _.ParseTrailers(commitHash: string) =
             Git.CommandHelper.getGitResult repoDir $"""--no-pager log -1 {commitHash} --format="%%(trailers)" """
