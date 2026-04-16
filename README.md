@@ -3,6 +3,9 @@
 
 An F# toolkit for monorepo builds.
 
+## Warnings
+
+* if using the change keys extraction feature make sure the repo is not a shallow clone. Otherwise basing on an incomplete git log will result in missing change keys
 
 ## Interactive usage
 
