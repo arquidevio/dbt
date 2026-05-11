@@ -22,7 +22,7 @@ module BicepProject =
 
     let patterns =
       match Path.GetExtension(filePath) with
-      | ".bicepparam" -> [ usingRef; importRef ]
+      | ".bicepparam" -> [ usingRef ]
       | _ -> [ moduleRef; importRef ]
 
     try
