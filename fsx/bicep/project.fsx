@@ -87,13 +87,18 @@ module BicepSelectors =
           let rootDir = Directory.GetCurrentDirectory()
           let dependencyTree = BicepProject.makeDependencyTree rootDir
 
-          ctx.filesByDir
-          |> Map.values
-          |> Seq.collect (fun x -> x)
-          |> Seq.filter (fun f ->
-            let ext = Path.GetExtension(f)
-            ext = ".bicep" || ext = ".bicepparam")
-          |> Seq.map Path.GetFullPath
+          seq {
+            yield ctx.projectPath
+
+            yield!
+              ctx.filesByDir
+              |> Map.values
+              |> Seq.collect (fun x -> x)
+              |> Seq.filter (fun f ->
+                let ext = Path.GetExtension(f)
+                ext = ".bicep" || ext = ".bicepparam")
+              |> Seq.map Path.GetFullPath
+          }
           |> Seq.collect (BicepProject.findLeafDependants dependencyTree ctx.selector.isRequired)
           |> Seq.distinct)
       }
