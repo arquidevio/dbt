@@ -1,11 +1,11 @@
 #r "paket:
-  nuget Fake.Tools.Git ~> 6.0
+      nuget Fake.Tools.Git ~> 6.0
+      nuget Arquidev.Text ~> 0.1.0
 "
-
-#load "../regex.fsx"
 
 namespace Arquidev.Dbt
 
+open Arquidev.Tools
 open Fake.Core
 open Fake.Tools
 

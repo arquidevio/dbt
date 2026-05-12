@@ -7,7 +7,6 @@ namespace Arquidev.Dbt
 open Arquidev.Tools
 open System.IO
 
-/// Portable snapshot of a single selected project — no absolute paths.
 type private SnapshotProject =
   { projectId: string
     kind: string
