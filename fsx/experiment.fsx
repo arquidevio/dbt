@@ -1,7 +1,8 @@
 namespace Arquidev.Dbt
 
-#load "log.fsx"
+#r "paket: nuget Arquidev.Log ~> 0"
 
+open Arquidev.Tools
 open System
 
 [<RequireQualifiedAccess>]

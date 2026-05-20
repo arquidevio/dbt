@@ -1,7 +1,6 @@
 namespace Arquidev.Dbt
 
 #load "types.fsx"
-#load "log.fsx"
 #load "git-diff.fsx"
 #load "tools/git.fsx"
 #load "ci/github/last-success-sha.fsx"
@@ -11,6 +10,7 @@ namespace Arquidev.Dbt
 #r "paket:
         nuget Microsoft.Extensions.FileSystemGlobbing ~> 10
         nuget Arquidev.Env ~> 2.0.1
+        nuget Arquidev.Log ~> 0
 "
 
 open Arquidev.Tools
@@ -565,6 +565,7 @@ module rec PlanBuilder =
       DBT_PROFILE: string
       DBT_CURRENT_COMMIT: string option
       DBT_BASE_COMMIT: string option
+      DBT_LOG_LEVEL: Log.LogLevel
       DBT_PR_TARGET_BRANCH: string option }
 
   [<RequireQualifiedAccess>]
@@ -584,10 +585,12 @@ module rec PlanBuilder =
 
     let evaluate (plan: Plan) : PlanOutput =
 
-      Log.info "DBT Build Plan"
-
       let env = env.Value
 
+      Log.setLogLevel env.DBT_LOG_LEVEL
+      Log.addSink (fun _ -> printfn "%s")
+      Log.info "DBT Build Plan"
+      
       let plan =
         match plan.range with
         | None ->

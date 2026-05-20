@@ -1,9 +1,11 @@
+#r "paket: nuget Arquidev.Log ~> 0"
+
 #load "../types.fsx"
-#load "../log.fsx"
 #load "../plan.fsx"
 
 namespace Arquidev.Dbt
 
+open Arquidev.Tools
 open System.IO
 open System.Text.RegularExpressions
 
