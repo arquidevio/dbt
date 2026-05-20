@@ -588,7 +588,7 @@ module rec PlanBuilder =
       let env = env.Value
 
       env.DBT_LOG_LEVEL |> Option.iter Log.setLogLevel
-      Log.addSink (fun _ -> printfn "%s")
+      use _ = Log.addSink (fun _ -> printfn "%s")
       Log.info "DBT Build Plan"
       
       let plan =
