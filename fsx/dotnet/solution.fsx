@@ -7,8 +7,6 @@
 
 namespace Arquidev.Dbt
 
-#load "../log.fsx"
-
 open Fake.Core
 open Ionide.ProjInfo.InspectSln
 open System.Xml.XPath
@@ -133,37 +131,3 @@ module Solution =
           dependantResults
 
     find Set.empty projectPath |> Seq.distinct
-
-  let generateRestoreList (slnDir: string) : unit =
-    Log.header "RESTORE LIST"
-    let slnPath = findInDir slnDir
-    Log.debug $"Solution: {slnPath}"
-    let originalPwd = Directory.GetCurrentDirectory()
-
-    try
-      Directory.SetCurrentDirectory slnDir
-      let input = StreamRef.Empty
-
-      let tar =
-        CreateProcess.fromRawCommand
-          "tar"
-          [ "--sort=name"
-            "--owner=root:0"
-            "--group=root:0"
-            "--mtime=2023-01-01 00:00:00"
-            "-czvf"
-            Path.Combine(slnDir, "restore-list.tar.gz")
-            "-T"
-            "-" ]
-        |> CreateProcess.withStandardInput (CreatePipe input)
-        |> Proc.start
-
-      findProjects (fun _ -> true) slnPath
-      |> Seq.map (fun path -> path.Replace(slnDir, String.Empty).Trim '/')
-      |> Seq.iter (fun path -> input.Value.Write(Text.Encoding.UTF8.GetBytes(path + Environment.NewLine)))
-
-      input.Value.Flush()
-      input.Value.Close()
-      tar.Wait()
-    finally
-      Directory.SetCurrentDirectory originalPwd

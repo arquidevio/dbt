@@ -1,10 +1,11 @@
-#r "paket: nuget Fake.Tools.Git ~> 6.0"
+#r "paket: nuget Fake.Tools.Git ~> 6.0
+           nuget Arquidev.Log ~> 0"
 
 namespace Arquidev.Dbt
 
 #load "types.fsx"
-#load "log.fsx"
 
+open Arquidev.Tools
 open Fake.Tools.Git
 open System.IO
 
