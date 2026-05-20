@@ -565,7 +565,7 @@ module rec PlanBuilder =
       DBT_PROFILE: string
       DBT_CURRENT_COMMIT: string option
       DBT_BASE_COMMIT: string option
-      DBT_LOG_LEVEL: Log.LogLevel
+      DBT_LOG_LEVEL: Log.LogLevel option
       DBT_PR_TARGET_BRANCH: string option }
 
   [<RequireQualifiedAccess>]
@@ -587,7 +587,7 @@ module rec PlanBuilder =
 
       let env = env.Value
 
-      Log.setLogLevel env.DBT_LOG_LEVEL
+      env.DBT_LOG_LEVEL |> Option.iter Log.setLogLevel
       Log.addSink (fun _ -> printfn "%s")
       Log.info "DBT Build Plan"
       
