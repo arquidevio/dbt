@@ -1,13 +1,9 @@
-#r "paket: 
-      nuget Ionide.ProjInfo ~> 0.74
-      nuget Fake.Core.Process ~> 6.0
-"
+#r "paket: nuget Ionide.ProjInfo ~> 0.74"
 
 #nowarn "57"
 
 namespace Arquidev.Dbt
 
-open Fake.Core
 open Ionide.ProjInfo.InspectSln
 open System.Xml.XPath
 open System.Collections.Generic

@@ -2,7 +2,7 @@ namespace Arquidev.Dbt
 
 #load "../../types.fsx"
 
-#r "paket: nuget Arquidev.Env ~> 2.0.1"
+#r "paket: nuget Arquidev.Env ~> 2"
 
 open Arquidev.Tools
 

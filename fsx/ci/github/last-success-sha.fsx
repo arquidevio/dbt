@@ -1,5 +1,5 @@
 #r "paket: nuget Arquidev.Fetch ~> 2
-           nuget Arquidev.Env ~> 2.0.1"
+           nuget Arquidev.Env ~> 2"
 
 namespace Arquidev.Dbt
 
