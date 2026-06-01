@@ -2,7 +2,9 @@ namespace Arquidev.Dbt
 
 #load "../../types.fsx"
 #load "../../json.fsx"
+#r "paket: nuget Arquidev.Log ~> 0"
 
+open Arquidev.Tools
 open System
 open System.IO
 
@@ -17,7 +19,9 @@ module Output =
 
       match Environment.GetEnvironmentVariable resultVarName with
       | null -> failwith $"{resultVarName} is not set"
-      | path -> File.WriteAllText(path, value)
+      | path ->
+        File.WriteAllText(path, value)
+        Log.debug $"Tekton output written to %s{path}:\n%s{value}"
 
       planOutput
 
@@ -28,6 +32,6 @@ module Output =
       planOutput
       |> writeToTektonResultWith resultName (fun o -> o |> value |> Json.write)
 
-    let writeToTektonResultArray (resultName: string) (value: PlanOutput -> 'a list) (planOutput: PlanOutput) =
+    let writeToTektonResultArray (resultName: string) (value: PlanOutput -> string list) (planOutput: PlanOutput) =
       planOutput
-      |> writeToTektonResultWith resultName (fun o -> o |> value |> List.map Json.write |> Json.write)
+      |> writeToTektonResultWith resultName (fun o -> o |> value |> Json.write)
