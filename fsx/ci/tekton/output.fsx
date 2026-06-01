@@ -24,6 +24,10 @@ module Output =
     let writeToTektonResultWith (resultName: string) (value: PlanOutput -> string) (planOutput: PlanOutput) =
       planOutput |> writeToTektonResult resultName (planOutput |> value)
 
-    let writeToTektonResultJson (resultName: string) (value: PlanOutput -> 'a) (planOutput: PlanOutput) =
+    let writeToTektonResultObject (resultName: string) (value: PlanOutput -> 'a) (planOutput: PlanOutput) =
       planOutput
       |> writeToTektonResultWith resultName (fun o -> o |> value |> Json.write)
+
+    let writeToTektonResultArray (resultName: string) (value: PlanOutput -> 'a list) (planOutput: PlanOutput) =
+      planOutput
+      |> writeToTektonResultWith resultName (fun o -> o |> value |> List.map Json.write |> Json.write)
