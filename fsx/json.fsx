@@ -5,18 +5,21 @@ namespace Arquidev.Dbt
 [<RequireQualifiedAccess>]
 module Json =
   open System.Text.Json
+  open System.Text.Encodings.Web
   open System.Text.Json.Serialization
   open Microsoft.FSharp.Reflection
 
   let private DefaultOptions =
-    JsonFSharpOptions.Default().WithSkippableOptionFields().ToJsonSerializerOptions()
-
-  let private PrettyOptions =
-    let o =
+    let options =
       JsonFSharpOptions.Default().WithSkippableOptionFields().ToJsonSerializerOptions()
 
-    o.WriteIndented <- true
-    o
+    options.Encoder <- JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    options
+
+  let private PrettyOptions =
+    let options = JsonSerializerOptions DefaultOptions
+    options.WriteIndented <- true
+    options
 
   let write (value: 'a) : string =
     if FSharpType.IsFunction typeof<'a> then
