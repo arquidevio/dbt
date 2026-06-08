@@ -1,11 +1,10 @@
-#r "paket: nuget Fake.Tools.Git ~> 6.0
-           nuget Arquidev.Log ~> 0"
+#r "paket: nuget Fake.Tools.Git ~> 6.0"
 
 namespace Arquidev.Dbt
 
 #load "types.fsx"
+#load "logsource.fsx"
 
-open Arquidev.Tools
 open Fake.Tools.Git
 open System.IO
 
@@ -39,26 +38,26 @@ module GitDiff =
     let currentCommit = toRef |> Option.defaultWith (fun () -> git "rev-parse HEAD")
     let baseCommit = fromRef
 
-    Log.info $"Current revision: %s{currentCommit}"
-    Log.info $"Resolving base commit using strategy: %A{fromRef}"
+    Logger.info $"Current revision: %s{currentCommit}"
+    Logger.info $"Resolving base commit using strategy: %A{fromRef}"
 
     let baseRefs =
       match baseCommit with
       | Parent
       | Override "0000000000000000000000000000000000000000" ->
-        Log.info "Base revisions(s): "
+        Logger.info "Base revisions(s): "
         let output = git $$"""show --no-patch --format="%P" {{currentCommit}}"""
         output.Split ' ' |> Seq.toList
       | Override ref ->
         let resolved = (git $"rev-parse {ref}").Trim()
-        Log.info $"Base revision override: {ref} -> {resolved}"
+        Logger.info $"Base revision override: {ref} -> {resolved}"
         [ resolved ]
       | MergeBase targetBranch ->
-        Log.info "%s" (git $"fetch origin {targetBranch}:refs/remotes/origin/{targetBranch}")
+        Logger.info "%s" (git $"fetch origin {targetBranch}:refs/remotes/origin/{targetBranch}")
 
         let output = git $"""merge-base origin/{targetBranch} {currentCommit} """
         let ref = output.Trim()
-        Log.info $"Base revision: {ref}"
+        Logger.info $"Base revision: {ref}"
         [ ref ]
 
     let dirs =
@@ -85,8 +84,8 @@ module GitDiff =
       else
         "Detected git changes in: "
 
-    Log.info $"%s{info}"
-    dirs |> Map.iter (fun dir _ -> Log.info "%s" dir)
+    Logger.info $"%s{info}"
+    dirs |> Map.iter (fun dir _ -> Logger.info "%s" dir)
 
     let dirs =
       dirs
@@ -94,7 +93,7 @@ module GitDiff =
         if Directory.Exists dir then
           true
         else
-          Log.warn $"WARNING: path '%s{dir}' no longer exists in the repository. Ignoring."
+          Logger.warn $"WARNING: path '%s{dir}' no longer exists in the repository. Ignoring."
           false)
 
     { dirs = dirs

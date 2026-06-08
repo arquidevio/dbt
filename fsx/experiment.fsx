@@ -1,6 +1,6 @@
 namespace Arquidev.Dbt
 
-#r "paket: nuget Arquidev.Log ~> 0"
+#load "logsource.fsx"
 
 open Arquidev.Tools
 open System
@@ -16,14 +16,14 @@ module Experiment =
     try
       try
         if isEnabled then
-          Log.header $"EXPERIMENT: {name}"
+          Logger.header $"EXPERIMENT: {name}"
           experimentFunc () |> Some
         else
           None
       with exn ->
-        Log.error "WARN: experiment failed"
-        Log.error "%A" exn
+        Logger.error "WARN: experiment failed"
+        Logger.error "%A" exn
         None
     finally
       if isEnabled then
-        Log.header $"EXPERIMENT END"
+        Logger.header $"EXPERIMENT END"

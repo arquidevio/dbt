@@ -1,6 +1,7 @@
 namespace Arquidev.Dbt
 
 #load "types.fsx"
+#load "logsource.fsx"
 #load "git-diff.fsx"
 #load "tools/git.fsx"
 #load "ci/github/last-success-sha.fsx"
@@ -9,8 +10,8 @@ namespace Arquidev.Dbt
 
 #r "paket:
         nuget Microsoft.Extensions.FileSystemGlobbing ~> 10
-        nuget Arquidev.Env ~> 2
-        nuget Arquidev.Log ~> 0
+        nuget Arquidev.Env ~> 2.1 prerelease
+        nuget Arquidev.Log.Console ~> 0.1.0 prerelease
 "
 
 open Arquidev.Tools
@@ -87,9 +88,9 @@ module Pipeline =
       |> Option.map (fun path -> Path.Combine(cwd, path))
       |> Option.defaultValue cwd
 
-    Log.debug "discovery root: %s" discoveryRoot
-    Log.debug "patterns: %A" selector.patterns
-    Log.debug "exclude: %A" selector.excludePatterns
+    Logger.debug "discovery root: %s" discoveryRoot
+    Logger.debug "patterns: %A" selector.patterns
+    Logger.debug "exclude: %A" selector.excludePatterns
 
     let projectMatcher = Matcher()
     selector.patterns |> List.iter (fun p -> projectMatcher.AddInclude p |> ignore)
@@ -101,16 +102,16 @@ module Pipeline =
       let findParent =
         findParentProjectPath discoveryRoot projectMatcher projectExcludeMatcher includeRootDir
 
-      if Log.debugEnabled () then
+      if Logger.isEnabled Log.Level.debug then
         fun dirs ->
           let groups = dirs |> Seq.groupBy findParent |> Seq.toList
 
           for projects, changedDirs in groups do
             match projects with
-            | [] -> Log.debug "Project: '%s'" NoProject
-            | ps -> ps |> List.iter (Log.debug "Project: '%s'")
+            | [] -> Logger.debug "Project: '%s'" NoProject
+            | ps -> ps |> List.iter (Logger.debug "Project: '%s'")
 
-            changedDirs |> Seq.iter (Log.debug " - %s")
+            changedDirs |> Seq.iter (Logger.debug " - %s")
 
           groups |> Seq.collect fst
       else
@@ -134,7 +135,7 @@ module Pipeline =
           paths |> Seq.except (paths |> Seq.filter selector.isRequired)
 
         for path in neitherIgnoredNorRequired do
-          Log.warn
+          Logger.warn
             $"WARNING: %s{path} is a leaf project not matching the inclusion criteria. The project will be ignored."
 
         paths
@@ -210,7 +211,7 @@ module rec PlanBuilder =
       | [ s ] -> Some s
       | [] -> None
       | _ ->
-        Log.trace "%A" state
+        Logger.trace "%A" state
         failwithf "extend can be only called once"
 
     let output =
@@ -232,7 +233,7 @@ module rec PlanBuilder =
         | BaseSelector _ -> false
         | _ -> true)
 
-    Log.trace "SELECTOR BUILDER RUN: %A -> %A" state output
+    Logger.trace "SELECTOR BUILDER RUN: %A -> %A" state output
     output
 
   [<NoComparison; NoEquality>]
@@ -322,7 +323,7 @@ module rec PlanBuilder =
     [<CustomOperation("extend")>]
     member inline _.Extend(state, defaults: SelectorFacet list) =
       let output = [ BaseSelector defaults ] @ state
-      Log.debug "SELECTOR EXTEND: %A -> %A" state output
+      Logger.debug "SELECTOR EXTEND: %A -> %A" state output
       output
 
     member _.Run(state: SelectorFacet list) : SelectorFacet list = flattenSelector state
@@ -406,7 +407,7 @@ module rec PlanBuilder =
           |> Option.map (fun x -> { s with expandLeafs = x })
           |> Option.defaultValue s
 
-    Log.trace "Make selector: %A -> %A" originalState output
+    Logger.trace "Make selector: %A -> %A" originalState output
     output
 
   [<NoComparison; NoEquality>]
@@ -493,7 +494,7 @@ module rec PlanBuilder =
           { s with
               selector = Some(makeSelector selectorFacets) }
 
-    Log.trace "Make profile: %A -> %A" state output
+    Logger.trace "Make profile: %A -> %A" state output
     output
 
   [<NoComparison; NoEquality>]
@@ -565,7 +566,7 @@ module rec PlanBuilder =
       DBT_PROFILE: string
       DBT_CURRENT_COMMIT: string option
       DBT_BASE_COMMIT: string option
-      DBT_LOG_LEVEL: Log.LogLevel option
+      DBT_LOG_LEVEL: Log.Level option
       DBT_PR_TARGET_BRANCH: string option }
 
   [<RequireQualifiedAccess>]
@@ -586,10 +587,8 @@ module rec PlanBuilder =
     let evaluate (plan: Plan) : PlanOutput =
 
       let env = env.Value
-
-      env.DBT_LOG_LEVEL |> Option.iter Log.setLogLevel
-      use _ = Log.addSink (fun _ -> printfn "%s")
-      Log.info "DBT Build Plan"
+      use _ = Log.Console.enable()
+      Logger.info "DBT Build Plan"
 
       let plan =
         match plan.range with
@@ -601,9 +600,9 @@ module rec PlanBuilder =
                     toRef = env.DBT_CURRENT_COMMIT } }
         | Some _ -> plan
 
-      Log.trace "%A" plan
-      Log.info $"Mode: %s{env.DBT_MODE.ToString().ToLower()}"
-      Log.info $"Profile: %s{env.DBT_PROFILE}"
+      Logger.trace "%A" plan
+      Logger.info $"Mode: %s{env.DBT_MODE.ToString().ToLower()}"
+      Logger.info $"Profile: %s{env.DBT_PROFILE}"
 
       let mode = env.DBT_MODE
       let profileId = env.DBT_PROFILE
@@ -616,7 +615,7 @@ module rec PlanBuilder =
       let dirs, diffRange =
         match mode with
         | Diff ->
-          Log.header "GIT CHANGE SET"
+          Logger.header "GIT CHANGE SET"
 
           let baseCommitStrategy (fromRef: string option) =
             match env.DBT_PR_TARGET_BRANCH with
@@ -664,12 +663,12 @@ module rec PlanBuilder =
                 |> Seq.toList))
             |> Option.flatten }
 
-      Log.trace "%A" result
+      Logger.trace "%A" result
 
       Snapshot.apply result
 
       if result.requiredProjects.Length = 0 then
-        Log.info "No project changes. Exiting"
+        Logger.info "No project changes. Exiting"
 #if !INTERACTIVE
         exit 0
 #endif
@@ -679,7 +678,7 @@ module rec PlanBuilder =
       result
 
     let summary (output: PlanOutput) =
-      Log.header "REQUIRED PROJECTS"
+      Logger.header "REQUIRED PROJECTS"
 
       for p in output.requiredProjects do
-        Log.info $"> {p.projectId} {p.fullPath}"
+        Logger.info $"> {p.projectId} {p.fullPath}"

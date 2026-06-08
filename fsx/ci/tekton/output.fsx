@@ -2,7 +2,7 @@ namespace Arquidev.Dbt
 
 #load "../../types.fsx"
 #load "../../json.fsx"
-#r "paket: nuget Arquidev.Log ~> 0"
+#r "paket: nuget Arquidev.Log ~> 0.3 prerelease"
 
 open Arquidev.Tools
 open System
