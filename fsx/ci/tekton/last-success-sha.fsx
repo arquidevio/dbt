@@ -78,7 +78,7 @@ module LastSuccessSha =
         let results () =
           let filter =
             $"summary.status==SUCCESS"
-            + $"&&annotations['tekton.dev/pipeline']=='{env.PIPELINE_NAME}'"
+            + $"&&annotations['tekton.dev/pipeline'].matches('^{env.PIPELINE_NAME}(-[a-z0-9]+-r)?$')"
             + $"&&annotations['branch']=='{env.DBT_SOURCE_BRANCH}'"
 
           let q = "filter=" + System.Uri.EscapeDataString filter
