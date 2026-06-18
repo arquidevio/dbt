@@ -66,7 +66,7 @@ module LastSuccessSha =
             {| TEKTON_RESULTS_HOST: string
                RESULTS_PARENT: string
                PIPELINE_NAME: string
-               GIT_BRANCH: string |}
+               DBT_SOURCE_BRANCH: string |}
            > ()
 
         let readSaToken () =
@@ -77,7 +77,7 @@ module LastSuccessSha =
           let filter =
             $"summary.status==SUCCESS"
             + $"&&annotations['tekton.dev/pipeline']=='{env.PIPELINE_NAME}'"
-            + $"&&annotations['branch']=='{env.GIT_BRANCH}'"
+            + $"&&annotations['branch']=='{env.DBT_SOURCE_BRANCH}'"
 
           let q = "filter=" + System.Uri.EscapeDataString filter
 
