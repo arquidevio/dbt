@@ -1,4 +1,4 @@
-#r "paket: nuget Arquidev.Fetch ~> 2
+#r "paket: nuget Arquidev.Fetch ~> 2.2
            nuget Arquidev.Env ~> 2"
 
 namespace Arquidev.Dbt.Tekton
@@ -38,6 +38,14 @@ type RunDiscovery =
 [<RequireQualifiedAccess>]
 module LastSuccessSha =
 
+  type TektonEnv =
+    { TEKTON_RESULTS_HOST: string
+      [<Env.Default("false")>]
+      TEKTON_RESULTS_HOST_INSECURE: bool
+      RESULTS_PARENT: string
+      PIPELINE_NAME: string
+      DBT_SOURCE_BRANCH: string }
+
   let private commitOf (r: Result) =
     r.summary.annotations |> Map.tryFind "commit"
 
@@ -61,13 +69,7 @@ module LastSuccessSha =
       match context.TEKTON_RESULTS_HOST with
       | None -> Skipped
       | Some _ ->
-        let env =
-          readEnv<
-            {| TEKTON_RESULTS_HOST: string
-               RESULTS_PARENT: string
-               PIPELINE_NAME: string
-               DBT_SOURCE_BRANCH: string |}
-           > ()
+        let env = readEnv<TektonEnv> ()
 
         let readSaToken () =
           let path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
@@ -87,6 +89,7 @@ module LastSuccessSha =
 
             Authorization $"Bearer {readSaToken ()}"
             Accept "application/json"
+            insecure env.TEKTON_RESULTS_HOST_INSECURE
           }
           |> _.results
 
