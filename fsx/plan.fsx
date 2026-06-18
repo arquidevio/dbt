@@ -4,6 +4,7 @@ namespace Arquidev.Dbt
 #load "git-diff.fsx"
 #load "tools/git.fsx"
 #load "ci/github/last-success-sha.fsx"
+#load "ci/tekton/last-success-sha.fsx"
 #load "ce.fsx"
 #load "snapshot.fsx"
 
@@ -566,7 +567,8 @@ module rec PlanBuilder =
       DBT_CURRENT_COMMIT: string option
       DBT_BASE_COMMIT: string option
       DBT_LOG_LEVEL: Log.LogLevel option
-      DBT_PR_TARGET_BRANCH: string option }
+      DBT_PR_TARGET_BRANCH: string option
+      DBT_CI: string option }
 
   [<RequireQualifiedAccess>]
   module Plan =
@@ -581,7 +583,11 @@ module rec PlanBuilder =
               |> Option.orElseWith (fun () ->
                 match env.DBT_PR_TARGET_BRANCH with
                 | Some _ -> None
-                | _ -> LastSuccessSha.getLastSuccessCommitHash () |> _.toOption) })
+                | _ ->
+                  match env.DBT_CI with
+                  | Some "TEKTON" -> Tekton.LastSuccessSha.getLastSuccessCommitHash () |> _.toOption
+                  | Some "GITHUB" -> Github.LastSuccessSha.getLastSuccessCommitHash () |> _.toOption
+                  | _ -> failwith $"Last success commit hash for %A{env.DBT_CI} not supported") })
 
     let evaluate (plan: Plan) : PlanOutput =
 

@@ -1,7 +1,7 @@
 #r "paket: nuget Arquidev.Fetch ~> 2
            nuget Arquidev.Env ~> 2"
 
-namespace Arquidev.Dbt
+namespace Arquidev.Dbt.Github
 
 open Arquidev.Tools
 
