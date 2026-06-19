@@ -1,6 +1,6 @@
 namespace Arquidev.Dbt
 
-#r "paket: nuget Arquidev.Log ~> 0"
+#r "paket: nuget Arquidev.Log ~> 0.1"
 
 #load "types.fsx"
 #load "json.fsx"

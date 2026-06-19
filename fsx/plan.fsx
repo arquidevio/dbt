@@ -10,8 +10,8 @@ namespace Arquidev.Dbt
 
 #r "paket:
         nuget Microsoft.Extensions.FileSystemGlobbing ~> 10
-        nuget Arquidev.Env ~> 2
-        nuget Arquidev.Log ~> 0
+        nuget Arquidev.Env ~> 2.0
+        nuget Arquidev.Log ~> 0.1
 "
 
 open Arquidev.Tools

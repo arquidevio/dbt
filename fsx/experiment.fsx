@@ -1,6 +1,6 @@
 namespace Arquidev.Dbt
 
-#r "paket: nuget Arquidev.Log ~> 0"
+#r "paket: nuget Arquidev.Log ~> 0.1"
 
 open Arquidev.Tools
 open System

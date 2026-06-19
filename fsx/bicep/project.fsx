@@ -1,4 +1,4 @@
-#r "paket: nuget Arquidev.Log ~> 0"
+#r "paket: nuget Arquidev.Log ~> 0.1"
 
 #load "../types.fsx"
 #load "../plan.fsx"
