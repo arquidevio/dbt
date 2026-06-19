@@ -587,7 +587,8 @@ module rec PlanBuilder =
                   match env.DBT_CI with
                   | Some "TEKTON" -> Tekton.LastSuccessSha.getLastSuccessCommitHash () |> _.toOption
                   | Some "GITHUB" -> Github.LastSuccessSha.getLastSuccessCommitHash () |> _.toOption
-                  | _ -> failwith $"Last success commit hash for %A{env.DBT_CI} not supported") })
+                  | Some ci -> failwith $"Last success commit hash for: %s{ci} not supported"
+                  | None -> None) })
 
     let evaluate (plan: Plan) : PlanOutput =
 
