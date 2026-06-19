@@ -1,5 +1,5 @@
 #r "paket: nuget Arquidev.Fetch ~> 2.2
-           nuget Arquidev.Env ~> 2.0"
+           nuget Arquidev.Env ~> 2.0.0"
 
 namespace Arquidev.Dbt.Tekton
 

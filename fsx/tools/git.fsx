@@ -1,6 +1,6 @@
 #r "paket:
       nuget Fake.Tools.Git ~> 6.0
-      nuget Arquidev.Text ~> 0.1
+      nuget Arquidev.Text ~> 0.1.0
 "
 
 namespace Arquidev.Dbt
