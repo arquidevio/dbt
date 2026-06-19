@@ -2,7 +2,7 @@
 #load "../../fsx/ci/github/last-success-sha.fsx"
 
 open Expecto
-open Arquidev.Dbt
+open Arquidev.Dbt.Github
 
 [<Tests>]
 let tests =
