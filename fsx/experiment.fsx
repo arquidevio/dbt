@@ -1,12 +1,13 @@
 namespace Arquidev.Dbt
 
-#r "paket: nuget Arquidev.Log ~> 0.1.0"
+#r "paket: nuget Arquidev.Log ~> 0.3.0"
 
 open Arquidev.Tools
 open System
 
 [<RequireQualifiedAccess>]
 module Experiment =
+  let private log = Log.Source "Arquidev.Dbt.Experiment"
   let run (name: string) (enabledEnvVarName: string) (experimentFunc: unit -> 'a) : 'a option =
 
     let isEnabled =
@@ -16,14 +17,14 @@ module Experiment =
     try
       try
         if isEnabled then
-          Log.header $"EXPERIMENT: {name}"
+          log.header $"EXPERIMENT: {name}"
           experimentFunc () |> Some
         else
           None
       with exn ->
-        Log.error "WARN: experiment failed"
-        Log.error "%A" exn
+        log.error "WARN: experiment failed"
+        log.error "%A" exn
         None
     finally
       if isEnabled then
-        Log.header $"EXPERIMENT END"
+        log.header $"EXPERIMENT END"

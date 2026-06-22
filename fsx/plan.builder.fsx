@@ -39,13 +39,13 @@ module rec PlanBuilder =
 
 
   type CoreBuilder() =
-    member inline _.Zero() : 'a list = []
-    member inline _.Delay(f: unit -> 'a list) = f ()
-    member inline _.Yield(x: 'a list) = x
-    member inline _.Yield(x: 'a) = [ x ]
-    member inline _.Yield(x: unit) = []
-    member inline _.Combine(a, b) = a @ b
-    member inline _.For(xs, f: unit -> 'a list) = (xs |> Seq.toList) @ f ()
+    member _.Zero() : 'a list = []
+    member _.Delay(f: unit -> 'a list) = f ()
+    member _.Yield(x: 'a list) = x
+    member _.Yield(x: 'a) = [ x ]
+    member _.Yield(x: unit) = []
+    member _.Combine(a, b) = a @ b
+    member _.For(xs, f: unit -> 'a list) = (xs |> Seq.toList) @ f ()
 
 
   let tryGetSelectorId (state: SelectorFacet list) =
@@ -98,7 +98,7 @@ module rec PlanBuilder =
     member _.defaults: SelectorBuilderDefaults = SelectorBuilderDefaults()
 
     [<CustomOperation("id")>]
-    member inline _.Id(state, id: string) = [ SelectorId id ] @ state
+    member _.Id(state, id: string) = [ SelectorId id ] @ state
 
     /// <summary>
     /// Glob pattern for matching project files
@@ -111,7 +111,7 @@ module rec PlanBuilder =
     /// </code>
     /// </example>
     [<CustomOperation("pattern")>]
-    member inline _.Pattern(state, pattern: string) = [ Pattern pattern ] @ state
+    member _.Pattern(state, pattern: string) = [ Pattern pattern ] @ state
 
     /// <summary>
     /// Glob exclusion patterns to filter out unwanted projects discovered by the selector pattern
@@ -129,7 +129,7 @@ module rec PlanBuilder =
     /// </code>
     /// </example>
     [<CustomOperation("exclude")>]
-    member inline _.Exclude(state, exclude: string) = [ Exclude exclude ] @ state
+    member _.Exclude(state, exclude: string) = [ Exclude exclude ] @ state
 
     /// <summary>
     /// Determines if a detected project is required
@@ -138,7 +138,7 @@ module rec PlanBuilder =
     /// Default: true
     /// </remarks>
     [<CustomOperation("required_when")>]
-    member inline _.RequiredWhen(state, isRequired: string -> bool) = [ RequiredWhen isRequired ] @ state
+    member _.RequiredWhen(state, isRequired: string -> bool) = [ RequiredWhen isRequired ] @ state
 
     /// <summary>
     /// Determines if a detected project should be ignored
@@ -147,19 +147,19 @@ module rec PlanBuilder =
     /// Default: false
     /// </remarks>
     [<CustomOperation("ignored_when")>]
-    member inline _.IgnoredWhen(state, isIgnored: string -> bool) = [ IgnoredWhen isIgnored ] @ state
+    member _.IgnoredWhen(state, isIgnored: string -> bool) = [ IgnoredWhen isIgnored ] @ state
 
     /// <summary>
     /// Overrides the root directory used for project discovery (default: cwd)
     /// </summary>
     [<CustomOperation("discovery_root")>]
-    member inline _.DiscoveryRoot(state, path: string) = [ DiscoveryRoot path ] @ state
+    member _.DiscoveryRoot(state, path: string) = [ DiscoveryRoot path ] @ state
 
     /// <summary>
     /// Overrides the default project id generation function
     /// </summary
     [<CustomOperation("project_id")>]
-    member inline _.ProjectId(state, projectId: ProjectMetadata -> string) = [ ProjectId projectId ] @ state
+    member _.ProjectId(state, projectId: ProjectMetadata -> string) = [ ProjectId projectId ] @ state
 
     /// <summary>
     /// Determines if/how to traverse dependency tree to determine the leaf projects
@@ -169,14 +169,14 @@ module rec PlanBuilder =
     /// * Some built-in selectors, like the dotnet selector have a strategy implemented
     /// </remarks>
     [<CustomOperation("expand_leafs")>]
-    member inline _.ExpandLeafs(state, expandLeafs: LeafExpansionContext -> string seq) =
+    member _.ExpandLeafs(state, expandLeafs: LeafExpansionContext -> string seq) =
       [ ExpandLeafs expandLeafs ] @ state
 
     /// <summary>
     /// Can be used to extend and customize an already existing selector (e.g. a built-in one)
     /// </summary>
     [<CustomOperation("extend")>]
-    member inline _.Extend(state, defaults: SelectorFacet list) =
+    member _.Extend(state, defaults: SelectorFacet list) =
       let output = [ BaseSelector defaults ] @ state
       log.debug "SELECTOR EXTEND: %A -> %A" state output
       output
@@ -274,21 +274,21 @@ module rec PlanBuilder =
     member _.Yield(state: SelectorFacet list) = [ state |> Selector ]
 
     [<CustomOperation("change_key_regex")>]
-    member inline _.ChangeKeyRegex(state, regex: string, ?replacement: string) =
+    member _.ChangeKeyRegex(state, regex: string, ?replacement: string) =
       [ ChangeKeyRegex(regex, replacement) ] @ state
 
     [<CustomOperation("post_action")>]
-    member inline _.PostAction(state, action: PlanOutput -> unit) = [ PostAction action ] @ state
+    member _.PostAction(state, action: PlanOutput -> unit) = [ PostAction action ] @ state
 
     [<CustomOperation("id")>]
-    member inline _.Id(state, id: string) = [ ProfileId id ] @ state
+    member _.Id(state, id: string) = [ ProfileId id ] @ state
 
     [<CustomOperation("include_root_dir")>]
-    member inline _.IncludeRootDir(state, value: bool) = [ IncludeRootDir value ] @ state
+    member _.IncludeRootDir(state, value: bool) = [ IncludeRootDir value ] @ state
 
 
     [<CustomOperation("extend")>]
-    member inline _.Extend(state, defaults: ProfileFacet list) = [ BaseProfile defaults ] @ state
+    member _.Extend(state, defaults: ProfileFacet list) = [ BaseProfile defaults ] @ state
 
     member _.Run(state: ProfileFacet list) =
 
@@ -354,20 +354,20 @@ module rec PlanBuilder =
 
   [<NoComparison; NoEquality>]
   type RangeBuilder() =
-    member inline _.Yield(_: unit) = Range.Default
-    member inline _.Run p = Range p
+    member _.Yield(_: unit) = Range.Default
+    member _.Run p = Range p
 
     [<CustomOperation("from_ref")>]
-    member inline _.FromRef(range: Range, fromRef: string option) = { range with fromRef = fromRef }
+    member _.FromRef(range: Range, fromRef: string option) = { range with fromRef = fromRef }
 
     [<CustomOperation("from_ref")>]
-    member inline _.FromRef(range: Range, fromRef: string) = { range with fromRef = Some fromRef }
+    member _.FromRef(range: Range, fromRef: string) = { range with fromRef = Some fromRef }
 
     [<CustomOperation("to_ref")>]
-    member inline _.ToRef(range: Range, toRef: string option) = { range with toRef = toRef }
+    member _.ToRef(range: Range, toRef: string option) = { range with toRef = toRef }
 
     [<CustomOperation("to_ref")>]
-    member inline _.ToRef(range: Range, toRef: string) = { range with toRef = Some toRef }
+    member _.ToRef(range: Range, toRef: string) = { range with toRef = Some toRef }
 
   type PlanBuilder() =
     inherit CoreBuilder()
@@ -376,7 +376,7 @@ module rec PlanBuilder =
     member _.Yield(state: ProfileFacet list) = [ state |> makeProfile |> Profile ]
 
     [<CustomOperation("extend")>]
-    member inline _.Extend(state, defaults: Plan) = [ BasePlan defaults ] @ state
+    member _.Extend(state, defaults: Plan) = [ BasePlan defaults ] @ state
 
     member _.Run state =
       let defaults =

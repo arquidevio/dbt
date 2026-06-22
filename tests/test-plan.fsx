@@ -1,7 +1,6 @@
 #r "paket: nuget Expecto ~> 10"
 
 #load "../fsx/dotnet/project.fsx"
-#load "../fsx/plan.fsx"
 
 open Expecto
 open Arquidev.Dbt
