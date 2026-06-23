@@ -268,9 +268,3 @@ module Pipeline =
         action result
 
       result
-
-    let summary (output: PlanOutput) =
-      log.header "REQUIRED PROJECTS"
-
-      for p in output.requiredProjects do
-        log.info $"> {p.projectId} {p.fullPath}"
