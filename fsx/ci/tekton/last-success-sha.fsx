@@ -44,7 +44,8 @@ module LastSuccessSha =
       TEKTON_RESULTS_HOST_INSECURE: bool
       RESULTS_PARENT: string
       PIPELINE_NAME: string
-      DBT_SOURCE_BRANCH: string }
+      DBT_SOURCE_BRANCH: string
+      DEBUG: int option }
 
   let private commitOf (r: Result) =
     r.summary.annotations |> Map.tryFind "commit"
@@ -95,6 +96,7 @@ module LastSuccessSha =
 
         try
           Fetch.enableLogs ()
+          Fetch.debugEnabled (env.DEBUG = Some 1)
           logic results
         finally
           Fetch.disableLogs ()
