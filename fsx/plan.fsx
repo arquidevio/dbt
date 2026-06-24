@@ -17,7 +17,7 @@ open Arquidev.Tools
 open Arquidev.Dbt
 open Microsoft.Extensions.FileSystemGlobbing
 
-[<RequireQualifiedAccess>]
+[<AutoOpen>]
 module Pipeline =
   open System.IO
 
