@@ -6,9 +6,13 @@ namespace Arquidev.Dbt
 
 open Arquidev.Tools
 
-[<RequireQualifiedAccess>]
-module Plan =
-    let private log = Log.Source "Arquidev.Dbt.Plan"
+[<AutoOpen>]
+module Output =
+
+  [<RequireQualifiedAccess>]
+  module Plan =
+    let private log = Log.Source "Arquidev.Dbt.Output"
+
     let summary (output: PlanOutput) =
       log.header "REQUIRED PROJECTS"
 
