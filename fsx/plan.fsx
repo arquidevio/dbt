@@ -174,6 +174,13 @@ module Pipeline =
                   | Some ci -> failwith $"Last success commit hash for: %s{ci} not supported"
                   | None -> None) })
 
+
+    let summary (output: PlanOutput) =
+      log.header "REQUIRED PROJECTS"
+
+      for p in output.requiredProjects do
+        log.info $"> {p.projectId} {p.fullPath}"
+
     let evaluate (plan: Plan) : PlanOutput =
       let env = env.Value
 
