@@ -7,7 +7,7 @@ namespace Arquidev.Dbt
 open Arquidev.Tools
 
 [<AutoOpen>]
-module PlanOutput =
+module PlanExtensions =
 
   [<RequireQualifiedAccess>]
   module Plan =
