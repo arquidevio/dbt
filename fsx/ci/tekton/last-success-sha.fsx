@@ -19,7 +19,7 @@ type Result =
     summary: Summary }
 
 type ResultsResponse =
-  { results: Result list
+  { results: Result list option
     nextPageToken: string option }
 
 type RunDiscovery =
@@ -53,10 +53,11 @@ module LastSuccessSha =
   let private endKey (r: Result) =
     r.summary.end_time |> Option.defaultValue r.update_time
 
-  let internal logic (results: unit -> Result list) =
-    match results () with
-    | [] -> NoneFound
-    | results ->
+  let internal logic (results: Result list option) =
+    match results with
+    | None
+    | Some [] -> NoneFound
+    | Some results ->
       results
       |> Seq.sortByDescending endKey
       |> Seq.tryHead
@@ -97,7 +98,7 @@ module LastSuccessSha =
         try
           Fetch.enableLogs ()
           Fetch.debugEnabled (env.DEBUG = Some 1)
-          logic results
+          results () |> logic
         finally
           Fetch.disableLogs ()
 
