@@ -19,11 +19,13 @@ module Output =
     let writeToTektonResult (resultName: string) (value: string) (planOutput: PlanOutput) =
       let resultVarName = $"RESULT_{resultName}"
 
-      match Environment.GetEnvironmentVariable resultVarName with
-      | null -> failwith $"{resultVarName} is not set"
-      | path ->
-        File.WriteAllText(path, value)
-        log.debug $"Tekton output written to %s{path}:\n%s{value}"
+      let path =
+        Environment.GetEnvironmentVariable resultVarName
+        |> Option.ofObj
+        |> Option.defaultValue $"./{resultName}.txt"
+
+      File.WriteAllText(path, value)
+      log.debug $"Tekton output written to %s{path}:\n%s{value}"
 
       planOutput
 
