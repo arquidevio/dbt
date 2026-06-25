@@ -1,6 +1,6 @@
 namespace Arquidev.Dbt
 
-#r "paket: nuget Arquidev.Log ~> 0.1.0"
+#r "paket: nuget Arquidev.Log ~> 0.3.0"
 
 #load "types.fsx"
 #load "json.fsx"
@@ -24,6 +24,8 @@ type private SnapshotRecord =
 
 [<RequireQualifiedAccess>]
 module Snapshot =
+
+  let private log = Log.Source "Arquidev.Dbt.Snapshot"
 
   let private toSnapshotProject (p: ProjectMetadata) : SnapshotProject =
     { projectId = p.projectId
@@ -78,27 +80,27 @@ module Snapshot =
     | None -> ()
 
     | Some Write ->
-      Log.header "SNAPSHOT WRITE"
+      log.header "SNAPSHOT WRITE"
       let snap = toRecord output
       let path = filePath dir profile output
       File.WriteAllText(path, Json.writePretty snap)
-      Log.info $"Snapshot written to: %s{path}"
+      log.info $"Snapshot written to: %s{path}"
 
     | Some Validate ->
-      Log.header "SNAPSHOT VALIDATE"
+      log.header "SNAPSHOT VALIDATE"
       let path = filePath dir profile output
 
       if not (File.Exists path) then
-        Log.error $"Snapshot file not found: %s{path}"
+        log.error $"Snapshot file not found: %s{path}"
         exit 1
 
       let saved = File.ReadAllText path |> Json.read<SnapshotRecord>
       let current = toRecord output
 
       if saved = current then
-        Log.info "Snapshot matches current output"
+        log.info "Snapshot matches current output"
       else
         let missPath = missFilePath dir profile output
         File.WriteAllText(missPath, Json.writePretty current)
-        Log.error $"Snapshot mismatch. Current output written to: %s{missPath}"
+        log.error $"Snapshot mismatch. Current output written to: %s{missPath}"
         exit 1

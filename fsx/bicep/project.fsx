@@ -1,7 +1,6 @@
-#r "paket: nuget Arquidev.Log ~> 0.1.0"
+#r "paket: nuget Arquidev.Log ~> 0.3.0"
 
-#load "../types.fsx"
-#load "../plan.fsx"
+#load "../plan.builder.fsx"
 
 namespace Arquidev.Dbt
 
@@ -11,6 +10,7 @@ open System.Text.RegularExpressions
 
 [<RequireQualifiedAccess>]
 module BicepProject =
+  let private log = Log.Source "Arquidev.Dbt.BicepProject"
 
   let private moduleRef =
     Regex("""module\s+\w+\s+'([^']+\.bicep)'""", RegexOptions.Compiled)
@@ -36,7 +36,7 @@ module BicepProject =
           |> Seq.cast<Match>
           |> Seq.map (fun m -> Path.GetFullPath(Path.Combine(dir, m.Groups.[1].Value)))))
     with ex ->
-      Log.warn "Failed to parse imports from %s: %s" filePath ex.Message
+      log.warn "Failed to parse imports from %s: %s" filePath ex.Message
       Seq.empty
 
   let makeDependencyTree (rootDir: string) : Map<string, string list> =

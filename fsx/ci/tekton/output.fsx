@@ -2,7 +2,7 @@ namespace Arquidev.Dbt
 
 #load "../../types.fsx"
 #load "../../json.fsx"
-#r "paket: nuget Arquidev.Log ~> 0.1.0"
+#r "paket: nuget Arquidev.Log ~> 0.3.0"
 
 open Arquidev.Tools
 open System
@@ -14,14 +14,18 @@ module Output =
   [<RequireQualifiedAccess>]
   module Plan =
 
+    let private log = Log.Source "Arquidev.Dbt.Output"
+
     let writeToTektonResult (resultName: string) (value: string) (planOutput: PlanOutput) =
       let resultVarName = $"RESULT_{resultName}"
 
-      match Environment.GetEnvironmentVariable resultVarName with
-      | null -> failwith $"{resultVarName} is not set"
-      | path ->
-        File.WriteAllText(path, value)
-        Log.debug $"Tekton output written to %s{path}:\n%s{value}"
+      let path =
+        Environment.GetEnvironmentVariable resultVarName
+        |> Option.ofObj
+        |> Option.defaultValue $"./{resultName}.txt"
+
+      File.WriteAllText(path, value)
+      log.debug $"Tekton output written to %s{path}:\n%s{value}"
 
       planOutput
 

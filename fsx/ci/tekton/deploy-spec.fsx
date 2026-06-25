@@ -2,7 +2,7 @@ namespace Arquidev.Dbt
 
 #load "../../types.fsx"
 
-#r "paket: nuget Arquidev.Env ~> 2.0.0"
+#r "paket: nuget Arquidev.Env ~> 2.1.0"
 
 open Arquidev.Tools
 
@@ -21,9 +21,7 @@ module TektonDeploymentSpec =
         [<Env.Default("00000000")>]
         DBT_REVISION: string // ← {{ revision }}
         [<Env.Default("0")>]
-        DBT_RUN_VERSION: int64  // ← pipelinesascode.tekton.dev/check-run-id (Downward API annotation,
-      //   not a PAC template var — inject via fieldRef in the task step)
-      //   NOTE: this annotation may differ depending on source forge
+        DBT_RUN_VERSION: int64 // custom
       }
 
       member x.DBT_REVISION_SHORT = x.DBT_REVISION[..6]

@@ -1,6 +1,38 @@
 namespace Arquidev.Dbt
 
-type ProjectMetadata =
+type Plan =
+  { profiles: Map<string, Profile> option
+    range: Range option }
+
+  static member Default = { profiles = None; range = None }
+
+and Range =
+  { fromRef: string option
+    toRef: string option }
+
+  static member Default = { fromRef = None; toRef = None }
+
+and Profile =
+  { id: string
+    includeRootDir: bool
+    changeKeyPrefixRegex: (string * string option) option
+    postActions: (PlanOutput -> unit) list
+    selector: Selector option }
+
+  static member Default =
+    { id = "default"
+      includeRootDir = false
+      changeKeyPrefixRegex = None
+      postActions = []
+      selector = None }
+
+and PlanOutput =
+  { requiredProjects: ProjectMetadata list
+    changeKeys: string list option
+    changeSetRange: ChangeSetRange option
+    changedDirs: Map<string, string list> option }
+
+and ProjectMetadata =
   { fileName: string
     fileNameNoExtension: string
     fullPath: string
@@ -20,7 +52,7 @@ type ProjectMetadata =
     let chunks = x.projectId.Split(c, 3)
     chunks[0], chunks[1], chunks[2]
 
-type Selector =
+and Selector =
   { id: string
     patterns: string list
     excludePatterns: string list
@@ -40,20 +72,16 @@ type Selector =
       projectId = fun p -> p.projectId
       expandLeafs = fun ctx -> Seq.singleton ctx.projectPath }
 
+and SelectorBuilderDefaults() = class end
+
 and LeafExpansionContext =
   { selector: Selector
     projectPath: string
     filesByDir: Map<string, string list> }
 
-type ChangeSetRange =
+and ChangeSetRange =
   { baseCommits: string list
     currentCommit: string }
-
-type PlanOutput =
-  { requiredProjects: ProjectMetadata list
-    changeKeys: string list option
-    changeSetRange: ChangeSetRange option
-    changedDirs: Map<string, string list> option }
 
 type SelectionContext =
   { filesByDir: Map<string, string list> }

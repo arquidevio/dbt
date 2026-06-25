@@ -1,5 +1,4 @@
-#load "../types.fsx"
-#load "../plan.fsx"
+#load "../plan.builder.fsx"
 
 namespace Arquidev.Dbt
 

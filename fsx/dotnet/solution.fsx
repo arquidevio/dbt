@@ -14,14 +14,7 @@ open System
 module Solution =
 
   let private getSlnData slnPath =
-    let result = tryParseSln slnPath
-
-    let data =
-      match result with
-      | Ok x -> x
-      | Error e -> failwith e.Message
-
-    data
+    tryParseSln slnPath |> Result.defaultWith (fun e -> failwith e.Message)
 
   let findInDir (dir: string) : string =
     Directory.EnumerateFiles dir

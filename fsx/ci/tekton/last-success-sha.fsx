@@ -1,5 +1,5 @@
 #r "paket: nuget Arquidev.Fetch ~> 2.2
-           nuget Arquidev.Env ~> 2.0.0"
+           nuget Arquidev.Env ~> 2.1.0"
 
 namespace Arquidev.Dbt.Tekton
 
@@ -19,7 +19,7 @@ type Result =
     summary: Summary }
 
 type ResultsResponse =
-  { results: Result list
+  { results: Result list option
     nextPageToken: string option }
 
 type RunDiscovery =
@@ -44,7 +44,8 @@ module LastSuccessSha =
       TEKTON_RESULTS_HOST_INSECURE: bool
       RESULTS_PARENT: string
       PIPELINE_NAME: string
-      DBT_SOURCE_BRANCH: string }
+      DBT_SOURCE_BRANCH: string
+      DEBUG: int option }
 
   let private commitOf (r: Result) =
     r.summary.annotations |> Map.tryFind "commit"
@@ -52,10 +53,11 @@ module LastSuccessSha =
   let private endKey (r: Result) =
     r.summary.end_time |> Option.defaultValue r.update_time
 
-  let internal logic (results: unit -> Result list) =
-    match results () with
-    | [] -> NoneFound
-    | results ->
+  let internal logic (results: Result list option) =
+    match results with
+    | None
+    | Some [] -> NoneFound
+    | Some results ->
       results
       |> Seq.sortByDescending endKey
       |> Seq.tryHead
@@ -95,7 +97,8 @@ module LastSuccessSha =
 
         try
           Fetch.enableLogs ()
-          logic results
+          Fetch.debugEnabled (env.DEBUG = Some 1)
+          results () |> logic
         finally
           Fetch.disableLogs ()
 
