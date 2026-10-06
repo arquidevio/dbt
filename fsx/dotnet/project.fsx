@@ -24,13 +24,17 @@ module DotnetProject =
 
 [<AutoOpen>]
 module DotnetSelectors =
+  open System.Collections.Concurrent
+  open System.Collections.Generic
 
   type SelectorBuilderDefaults with
     member _.dotnet: Selectors = Selectors()
 
   and Selectors() =
+    let trees = ConcurrentDictionary<string, IDictionary<string, string list>>()
+
     let expandWith findDependants (ctx: LeafExpansionContext) =
-      let projs = Solution.makeDependencyTree (Solution.findInCwd ())
+      let projs = trees.GetOrAdd(Solution.findInCwd (), Solution.makeDependencyTree)
       ctx.projectPath |> findDependants projs ctx.selector.isRequired
 
     member _.generic =
