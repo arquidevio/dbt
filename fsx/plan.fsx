@@ -28,18 +28,33 @@ module Pipeline =
 
   /// Find the closest ancestor dir of the originPath that contains files matching the project pattern.
   /// Returns all matches found in the first directory that has any.
+  /// For directories that no longer exist, the project files are matched against the deleted files in filesByDir.
   let findParentProjectPath
     (rootDir: string)
     (projectMatcher: Matcher)
     (projectExcludeMatcher: Matcher)
     (includeRootDir: bool)
+    (filesByDir: Map<string, string list>)
     (originPath: string)
     : string list =
+
+    let projectFiles (path: string) =
+      if Directory.Exists path then
+        projectMatcher.GetResultsInFullPath path
+      else
+        let fullPath = Path.GetFullPath path
+
+        filesByDir
+        |> Map.tryFind path
+        |> Option.defaultValue []
+        |> List.map Path.GetFullPath
+        |> fun files -> projectMatcher.Match(fullPath, files).Files
+        |> Seq.map (fun f -> Path.Combine(fullPath, f.Path))
 
     let rec findParentProj (path: string) =
 
       match
-        projectMatcher.GetResultsInFullPath path
+        projectFiles path
         |> projectExcludeMatcher.Match
         |> _.Files
         |> Seq.map _.Path
@@ -75,7 +90,7 @@ module Pipeline =
     let findParentProjects =
 
       let findParent =
-        findParentProjectPath discoveryRoot projectMatcher projectExcludeMatcher includeRootDir
+        findParentProjectPath discoveryRoot projectMatcher projectExcludeMatcher includeRootDir ctx.filesByDir
 
       if log.isEnabled Log.Level.debug then
         fun dirs ->
@@ -98,9 +113,17 @@ module Pipeline =
     |> Seq.distinct
     |> Seq.collect (fun projectPath ->
       selector.expandLeafs
-        { selector = selector
+        { selector =
+            { selector with
+                isRequired = fun p -> Path.Exists p && selector.isRequired p }
           projectPath = projectPath
           filesByDir = ctx.filesByDir })
+    |> Seq.filter (fun p ->
+      if Path.Exists p then
+        true
+      else
+        log.info $"Project %s{p} no longer exists in the repository. Ignoring."
+        false)
     |> Seq.filter (fun p -> (projectExcludeMatcher.Match p).HasMatches)
     |> Seq.distinct
     |> Seq.filter (not << selector.isIgnored)

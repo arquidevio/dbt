@@ -88,14 +88,10 @@ module GitDiff =
     log.info $"%s{info}"
     dirs |> Map.iter (fun dir _ -> log.info "%s" dir)
 
-    let dirs =
-      dirs
-      |> Map.filter (fun dir _ ->
-        if Directory.Exists dir then
-          true
-        else
-          log.warn $"WARNING: path '%s{dir}' no longer exists in the repository. Ignoring."
-          false)
+    dirs
+    |> Map.iter (fun dir _ ->
+      if not (Directory.Exists dir) then
+        log.info $"Path '%s{dir}' no longer exists in the repository. Only its dependants will be considered.")
 
     { dirs = dirs
       effectiveRange =
