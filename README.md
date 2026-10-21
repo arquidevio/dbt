@@ -40,3 +40,50 @@ plan {
     }
 } |> Plan.evaluate;;
 ```
+
+## Markdown selector
+
+`fsx/markdown/project.fsx` treats markdown docs (e.g. `AGENTS.md`) as projects whose inputs are the files they reference. Use it to keep docs in sync with the code they describe.
+
+References are:
+
+* relative links and images: `[x](path)`, resolved against the doc's dir (or the repo root if starting with `/`). Anchors, queries and scheme URLs are ignored
+* inline code that looks like a repo path: `` `src/app.fsx` ``, `` `config/` ``, resolved against the repo root (discovery root). A token counts if it has no whitespace or any of ``<>*{}$|=:'"` ``, doesn't start with `/`, `../`, `-` or `~`, and contains `/`, equals `Dockerfile` or has a known source extension (see `MarkdownDoc.sourceExtensions`)
+
+Code blocks are not inspected.
+
+Selectors:
+
+* `selector.defaults.markdown.agents` - `AGENTS.md`
+* `selector.defaults.markdown.generic` - no pattern, add your own (e.g. `pattern "CLAUDE.md"`)
+
+A doc is selected when a changed file equals one of its references or lies under a referenced directory.
+
+`MarkdownDoc.check` post action:
+
+* errors (exit 1) for every doc matching the selector (selected or not) referencing a path that doesn't exist
+* in `diff` mode warns for every selected doc which itself didn't change, listing the changed referenced files
+* in `all` mode only checks existence
+
+```fsharp
+let docs = selector { extend selector.defaults.markdown.agents }
+
+plan {
+  profile {
+    id "docs"
+    include_root_dir true
+    run_post_actions_when_empty true
+    docs
+    post_action (MarkdownDoc.check docs)
+  }
+}
+|> Plan.evaluate
+```
+
+`run_post_actions_when_empty true` makes the existence check run even if no doc is selected (e.g. only a doc changed).
+
+Limitations (the selector uses the standard closest-ancestor project discovery):
+
+* a doc only tracks changes under its own directory
+* a nested doc shadows parent docs for changes in its subtree
+* a root doc requires `include_root_dir true`. Then it covers the whole repo (unless shadowed)
