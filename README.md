@@ -1,71 +1,142 @@
 # dbt
 ## dependable build tools
 
-An F# toolkit for monorepo builds.
+F# toolkit for monorepo builds: given a git change set, find the projects to build.
 
-## Warnings
+## Quickstart
 
-* if using the change keys extraction feature make sure the repo is not a shallow clone. Otherwise basing on an incomplete git log will result in missing change keys
+`plan.fsx`:
 
-## Interactive usage
+```fsharp
+#r "paket: github arquidevio/dbt"
+#load "arquidevio/dbt/fsx/plan.fsx"
+#load "arquidevio/dbt/fsx/dotnet/project.fsx"
 
-Authoring a `plan` can be done in an interactive manner using `dotnet fsi`.
+open Arquidev.Dbt
 
-Prerequisites
-
-* A `paket` dependency manager provided to `dotnet fsi` via `--compilertool`.
-
-It can be installed via the [fsy](https://github.com/queil/fsy) dotnet tool.
-  * in dotnet 10 onwards it can be installed via `dnx fsy install-fsx-extensions`
-  * dotnet < 10:
-      1. Install `fsy`: `dotnet tool install --global fsy`
-      2. Install the `paket` manager files via: `fsy install-fsx-extensions` (it copies it to: `~/.fsharp/fsx-extensions/.fsch`)
-
-Pre-load an fsi session with `fsx/plan.fsx`:
+plan {
+  profile {
+    selector.defaults.dotnet.image
+    post_action (fun o -> for p in o.requiredProjects do printfn $"{p.projectId} {p.relativePath}")
+  }
+}
+|> Plan.evaluate
+|> ignore
+```
 
 ```bash
-dotnet fsi --compilertool:$(echo ~/.fsharp/fsx-extensions/.fsch) --use:./.fsi/plan.fsx
+fsy run plan.fsx                # changes since HEAD's parent(s)
+DBT_MODE=all fsy run plan.fsx   # every project
 ```
 
-Create and evaluate a plan:
+Pin with `github arquidevio/dbt:<tag-or-commit>`. Requires [fsy](https://github.com/queil/fsy).
+
+## How it works
+
+1. Diff mode: changed files between the base and current commit, grouped by dir. All mode: every tracked file.
+2. Each changed dir maps to its closest ancestor dir containing a file matching the selector `pattern`.
+3. `expand_leafs` maps that project to the leaf projects to build (e.g. a library to the apps referencing it).
+4. `required_when` / `ignored_when` / `exclude` filter the result.
+5. Post actions run on the `PlanOutput`, then `Plan.evaluate` returns it. If nothing is required the process exits 0 before both, unless `run_post_actions_when_empty true`.
+
+Run from the repo root.
+
+## Plan
+
+A plan holds profiles; `DBT_PROFILE` picks one (default: `default`). Each profile has one selector.
+
+| profile op | |
+|---|---|
+| `id "x"` | profile id (default `default`) |
+| `selector { ... }` | the selector |
+| `include_root_dir true` | include root-level files and the root dir as a project dir (default `false`) |
+| `post_action (fun output -> ...)` | run after evaluation; repeatable |
+| `run_post_actions_when_empty true` | run post actions even if nothing is required |
+| `change_key_regex "regex" "replacement"` | extract change keys from commit messages in range |
+| `extend otherProfile` | inherit facets |
+
+| selector op | |
+|---|---|
+| `id "x"` | becomes `ProjectMetadata.kind` |
+| `pattern "*.fsproj"` | project file glob; repeatable |
+| `exclude "dir/sub"` | exclusion glob, relative to cwd; repeatable |
+| `discovery_root "dir"` | discovery root (default cwd) |
+| `required_when (fun path -> ...)` | keep only matching projects (default all) |
+| `ignored_when (fun path -> ...)` | drop matching projects silently |
+| `project_id (fun meta -> ...)` | override project id (default from the relative dir) |
+| `expand_leafs (fun ctx -> ...)` | project to leaf projects (default identity) |
+| `extend selector.defaults.x.y` | customize a built-in selector |
+
+`range { from_ref "HEAD~3"; to_ref "HEAD" }` in a plan overrides `DBT_BASE_COMMIT`/`DBT_CURRENT_COMMIT`.
+
+## Built-in selectors
+
+| selector | load | selects |
+|---|---|---|
+| `selector.defaults.dotnet.generic` | `dotnet/project.fsx` | `*.*sproj`, expanded to leaf dependants via the `.sln`/`.slnx` in cwd; test projects ignored |
+| `selector.defaults.dotnet.image` | | `generic` with `IsPublishable=true` |
+| `selector.defaults.dotnet.nuget` | | `generic` with `IsPackable=true`, all packable dependants |
+| `selector.defaults.node.image` | `node/project.fsx` | `package.json` |
+| `selector.defaults.bicep.generic` | `bicep/project.fsx` | `.bicepparam` dependants of changed `.bicep` (`module`, `using`, `import`) |
+| `selector.defaults.kustomize.generic` | `kustomize/project.fsx` | leaf `kustomization.yaml` dirs via `resources`/`components` |
+| `selector.defaults.markdown.agents` | `markdown/project.fsx` | `AGENTS.md` whose referenced files changed |
+| `selector.defaults.markdown.generic` | | same, bring your own `pattern` |
+
+Customize:
 
 ```fsharp
-plan {
-    range {
-        from_ref "HEAD^^^"
-        to_ref "HEAD" 
-    }
-    profile { 
-        selector { pattern "*.fsx" }
-    }
-} |> Plan.evaluate;;
+selector {
+  discovery_root "infra"
+  required_when (fun p -> p.Contains "/envs/")
+  extend selector.defaults.kustomize.generic
+}
 ```
 
-## Markdown selector
+## Environment
 
-`fsx/markdown/project.fsx` treats markdown docs (e.g. `AGENTS.md`) as projects whose inputs are the files they reference. Use it to keep docs in sync with the code they describe.
+| var | default | |
+|---|---|---|
+| `DBT_MODE` | `diff` | `diff` or `all` |
+| `DBT_PROFILE` | `default` | profile to evaluate |
+| `DBT_BASE_COMMIT` | | base commit override |
+| `DBT_CURRENT_COMMIT` | `HEAD` | current commit |
+| `DBT_PR_TARGET_BRANCH` | | base = merge-base with `origin/<branch>` (fetched) |
+| `DBT_CI` | | `GITHUB` or `TEKTON`: base = last successful run's commit |
+| `DBT_LOG_LEVEL` | `info` | |
+| `DBT_SNAPSHOT` | | `write` or `validate`, see [Snapshots](#snapshots) |
+| `DBT_SNAPSHOT_DIR` | cwd | |
 
-References are:
+Base commit: `DBT_PR_TARGET_BRANCH` > `range`/`DBT_BASE_COMMIT` > `DBT_CI` last success > parent(s) of current.
 
-* relative links and images: `[x](path)`, resolved against the doc's dir (or the repo root if starting with `/`). Anchors, queries and scheme URLs are ignored
-* inline code that looks like a repo path: `` `src/app.fsx` ``, `` `config/` ``, resolved against the repo root (discovery root). A token counts if it has no whitespace or any of ``<>*{}$|=:'"` ``, doesn't start with `/`, `../`, `-` or `~`, and contains `/`, equals `Dockerfile` or has a known source extension (see `MarkdownDoc.sourceExtensions`)
+Don't use a shallow clone: diffs against missing history and change keys come out incomplete.
 
-Code blocks are not inspected.
+## CI
 
-Selectors:
+Load a module and pipe the plan output through it.
 
-* `selector.defaults.markdown.agents` - `AGENTS.md`
-* `selector.defaults.markdown.generic` - no pattern, add your own (e.g. `pattern "CLAUDE.md"`)
+| module | functions |
+|---|---|
+| `ci/github/output.fsx` | `Plan.appendToGithubOutput key value`, `...With key f`, `...Json key f` (writes `$GITHUB_OUTPUT`) |
+| `ci/github/deploy-spec.fsx` | `Plan.deploymentSpec output` from `GITHUB_*` vars |
+| `ci/tekton/output.fsx` | `Plan.writeToTektonResult name value`, `...With`, `...Object`, `...Array` (writes `$RESULT_<name>`) |
+| `ci/tekton/deploy-spec.fsx` | `Plan.deploymentSpec output` from `DBT_SOURCE_REPO`, `DBT_SOURCE_BRANCH`, `DBT_REVISION`, `DBT_RUN_VERSION` |
 
-A doc is selected when a changed file equals one of its references or lies under a referenced directory.
-
-`MarkdownDoc.check` post action:
-
-* errors (exit 1) for every doc matching the selector (selected or not) referencing a path that doesn't exist
-* in `diff` mode warns for every selected doc which itself didn't change, listing the changed referenced files
-* in `all` mode only checks existence
+Last-success lookup (`DBT_CI`) needs `GITHUB_TOKEN` on GitHub; `TEKTON_RESULTS_HOST`, `RESULTS_PARENT`, `PIPELINE_NAME`, `DBT_SOURCE_BRANCH` on Tekton.
 
 ```fsharp
+plan { ... }
+|> Plan.evaluate
+|> Plan.appendToGithubOutputJson "projects" (fun o -> o.requiredProjects |> List.map _.projectId)
+|> ignore
+```
+
+## Markdown docs
+
+Keeps docs such as `AGENTS.md` in sync with the code they describe.
+
+```fsharp
+#load "arquidevio/dbt/fsx/markdown/project.fsx"
+
 let docs = selector { extend selector.defaults.markdown.agents }
 
 plan {
@@ -80,10 +151,32 @@ plan {
 |> Plan.evaluate
 ```
 
-`run_post_actions_when_empty true` makes the existence check run even if no doc is selected (e.g. only a doc changed).
+- References: relative links (`[x](path)`, against the doc's dir, `/` = repo root) and path-like inline code (`` `src/app.fsx` ``, against the repo root). Code blocks, anchors, URLs and template tokens (`<x>`, globs, `../`, `~`) are ignored.
+- A doc is selected when a referenced file, or a file under a referenced dir, changed.
+- `MarkdownDoc.check` errors (exit 1) on missing references in any matching doc, and warns when a selected doc itself didn't change (diff mode only).
+- Limits: a doc only tracks changes under its own dir, nested docs shadow parent docs, a root doc needs `include_root_dir true`.
 
-Limitations (the selector uses the standard closest-ancestor project discovery):
+## Snapshots
 
-* a doc only tracks changes under its own directory
-* a nested doc shadows parent docs for changes in its subtree
-* a root doc requires `include_root_dir true`. Then it covers the whole repo (unless shadowed)
+Regression-test a plan against known commit ranges:
+
+```bash
+DBT_SNAPSHOT=write    DBT_PROFILE=p DBT_BASE_COMMIT=a DBT_CURRENT_COMMIT=b fsy run plan.fsx
+DBT_SNAPSHOT=validate DBT_PROFILE=p DBT_BASE_COMMIT=a DBT_CURRENT_COMMIT=b fsy run plan.fsx
+```
+
+Writes `.dbt-<profile>-<base>-<cur>.snapshot.json`. Validate exits 1 on mismatch and writes `.snapshot-miss.json`. See [arquidevio/test-dbt](https://github.com/arquidevio/test-dbt).
+
+## Interactive
+
+```bash
+dnx fsy install-fsx-extensions   # dotnet 10+; older: dotnet tool install -g fsy && fsy install-fsx-extensions
+dotnet fsi --compilertool:$(echo ~/.fsharp/fsx-extensions/.fsch) --use:./.fsi/plan.fsx
+```
+
+```fsharp
+plan {
+  range { from_ref "HEAD^^^"; to_ref "HEAD" }
+  profile { selector { pattern "*.fsx" } }
+} |> Plan.evaluate;;
+```
