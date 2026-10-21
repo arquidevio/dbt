@@ -15,6 +15,7 @@ and Range =
 and Profile =
   { id: string
     includeRootDir: bool
+    runPostActionsWhenEmpty: bool
     changeKeyPrefixRegex: (string * string option) option
     postActions: (PlanOutput -> unit) list
     selector: Selector option }
@@ -22,6 +23,7 @@ and Profile =
   static member Default =
     { id = "default"
       includeRootDir = false
+      runPostActionsWhenEmpty = false
       changeKeyPrefixRegex = None
       postActions = []
       selector = None }

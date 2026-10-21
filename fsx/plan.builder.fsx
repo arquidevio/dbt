@@ -19,6 +19,7 @@ module rec PlanBuilder =
   type ProfileFacet =
     | ProfileId of string
     | IncludeRootDir of bool
+    | RunPostActionsWhenEmpty of bool
     | BaseProfile of ProfileFacet list
     | Selector of SelectorFacet list
     | ChangeKeyRegex of regex: string * replacement: string option
@@ -286,6 +287,15 @@ module rec PlanBuilder =
     [<CustomOperation("include_root_dir")>]
     member _.IncludeRootDir(state, value: bool) = [ IncludeRootDir value ] @ state
 
+    /// <summary>
+    /// Run post actions even when no projects are required
+    /// </summary>
+    /// <remarks>
+    /// Default: false
+    /// </remarks>
+    [<CustomOperation("run_post_actions_when_empty")>]
+    member _.RunPostActionsWhenEmpty(state, value: bool) = [ RunPostActionsWhenEmpty value ] @ state
+
 
     [<CustomOperation("extend")>]
     member _.Extend(state, defaults: ProfileFacet list) = [ BaseProfile defaults ] @ state
@@ -310,6 +320,12 @@ module rec PlanBuilder =
       state
       |> List.tryPick (function
         | IncludeRootDir x -> Some x
+        | _ -> None)
+
+    let runPostActionsWhenEmpty =
+      state
+      |> List.tryPick (function
+        | RunPostActionsWhenEmpty x -> Some x
         | _ -> None)
 
     let changeKeyPrefixRegex =
@@ -337,6 +353,10 @@ module rec PlanBuilder =
       |> fun s ->
           includeRootDir
           |> Option.map (fun x -> { s with includeRootDir = x })
+          |> Option.defaultValue s
+      |> fun s ->
+          runPostActionsWhenEmpty
+          |> Option.map (fun x -> { s with runPostActionsWhenEmpty = x })
           |> Option.defaultValue s
       |> fun s ->
           changeKeyPrefixRegex

@@ -290,9 +290,12 @@ module Pipeline =
       Snapshot.apply result
 
       if result.requiredProjects.Length = 0 then
-        log.info "No project changes. Exiting"
+        if profile.runPostActionsWhenEmpty then
+          log.info "No project changes. Running post actions"
+        else
+          log.info "No project changes. Exiting"
 #if !INTERACTIVE
-        exit 0
+          exit 0
 #endif
       for action in profile.postActions do
         action result
