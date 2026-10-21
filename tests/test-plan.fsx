@@ -1,6 +1,7 @@
 #r "paket: nuget Expecto ~> 10"
 
 #load "../fsx/dotnet/project.fsx"
+#load "../fsx/plan.fsx"
 
 open Expecto
 open Arquidev.Dbt
@@ -81,9 +82,34 @@ let extendDoesNotDuplicatePatterns =
     "Patterns should not be duplicated" |> Expect.equal patterns.Length 2
   }
 
+let summaryPrintsAfterEvaluate =
+  testSequenced
+  <| test "Summary prints after the log sink is disposed" {
+    (Arquidev.Tools.Log.Console.enableWithLevel Arquidev.Tools.Log.Level.info).Dispose()
+
+    let out = new System.IO.StringWriter()
+    let stdout = System.Console.Out
+    System.Console.SetOut out
+
+    try
+      Plan.summary
+        { requiredProjects =
+            [ { ProjectMetadata.Empty with
+                  projectId = "app"
+                  fullPath = "/repo/app/app.fsproj" } ]
+          changeKeys = None
+          changeSetRange = None
+          changedDirs = None }
+    finally
+      System.Console.SetOut stdout
+
+    "Summary lists the project"
+    |> Expect.stringContains (out.ToString()) "> app /repo/app/app.fsproj"
+  }
+
 [<Tests>]
 let tests =
-  [ mergeSelectorsExtend; extendDoesNotDuplicatePatterns ]
+  [ mergeSelectorsExtend; extendDoesNotDuplicatePatterns; summaryPrintsAfterEvaluate ]
   |> testList "Plan builder"
 
 
