@@ -47,6 +47,12 @@ jobs:
           path: ~/.nuget
           key: ${{ steps.cache-nuget-restore.outputs.cache-primary-key }}
 
+      - name: Use checked out dbt
+        working-directory: test-dbt
+        run: |
+          sed -i 's|^#r "paket: github arquidevio/dbt"||; s|#load "arquidevio/dbt/fsx/|#load "../dbt/fsx/|' plan.fsx
+          grep -q '#load "../dbt/fsx/' plan.fsx
+
       - name: Validate snapshots
         working-directory: test-dbt
         run: |
