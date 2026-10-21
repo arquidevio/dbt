@@ -199,10 +199,10 @@ module Pipeline =
 
 
     let summary (output: PlanOutput) =
-      log.header "REQUIRED PROJECTS"
+      printfn "REQUIRED PROJECTS"
 
       for p in output.requiredProjects do
-        log.info $"> {p.projectId} {p.fullPath}"
+        printfn $"> {p.projectId} {p.fullPath}"
 
     let evaluate (plan: Plan) : PlanOutput =
       let env = env.Value
