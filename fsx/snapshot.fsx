@@ -65,6 +65,9 @@ module Snapshot =
   let private missFilePath (dir: string) (profile: string) (output: PlanOutput) =
     Path.Combine(dir, $"{baseName profile output}.snapshot-miss.json")
 
+  let isEnabled () =
+    (readEnv<{| DBT_SNAPSHOT: SnapshotMode option |}> ()).DBT_SNAPSHOT.IsSome
+
   let apply (output: PlanOutput) =
     let env =
       readEnv<
