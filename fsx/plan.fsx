@@ -175,7 +175,9 @@ module Pipeline =
       DBT_BASE_COMMIT: string option
       DBT_LOG_LEVEL: Log.Level option
       DBT_PR_TARGET_BRANCH: string option
-      DBT_CI: string option }
+      DBT_CI: string option
+      [<Env.Default("false")>]
+      DBT_WORKTREE: bool }
 
   [<RequireQualifiedAccess>]
   module Plan =
@@ -248,10 +250,18 @@ module Pipeline =
               | None -> Parent
 
           let result =
-            plan.range
-            |> Option.map (fun r -> profile.includeRootDir, baseCommitStrategy r.fromRef, r.toRef)
-            |> Option.defaultValue ((profile.includeRootDir, baseCommitStrategy None, None))
-            |||> GitDiff.dirsFromDiff
+            match plan.range with
+            | Some { toRef = Some _ } when env.DBT_WORKTREE ->
+              failwith "DBT_WORKTREE can't be combined with DBT_CURRENT_COMMIT or range to_ref"
+            | _ when env.DBT_WORKTREE && Snapshot.isEnabled () ->
+              failwith "DBT_WORKTREE can't be combined with DBT_SNAPSHOT"
+            | r when env.DBT_WORKTREE ->
+              GitDiff.dirsFromWorktreeDiff profile.includeRootDir (baseCommitStrategy (r |> Option.bind _.fromRef))
+            | r ->
+              r
+              |> Option.map (fun r -> profile.includeRootDir, baseCommitStrategy r.fromRef, r.toRef)
+              |> Option.defaultValue ((profile.includeRootDir, baseCommitStrategy None, None))
+              |||> GitDiff.dirsFromDiff
 
           result.dirs,
           Some

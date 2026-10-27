@@ -34,16 +34,25 @@ module GitDiff =
     |> Seq.map (fun (dir, pairs) -> dir, pairs |> Seq.map snd |> Seq.toList)
     |> Map.ofSeq
 
-  let dirsFromDiff (includeRootDir: bool) (fromRef: BaseCommitStrategy) (toRef: string option) : DiffResult =
+  let private diff (includeRootDir: bool) (fromRef: BaseCommitStrategy) (toRef: string option) (worktree: bool) =
 
     let currentCommit = toRef |> Option.defaultWith (fun () -> git "rev-parse HEAD")
     let baseCommit = fromRef
 
-    log.info $"Current revision: %s{currentCommit}"
+    if worktree then
+      log.info "Worktree mode: diffing the working tree (staged, unstaged, untracked) against the base"
+      log.info $"HEAD: %s{currentCommit}"
+    else
+      log.info $"Current revision: %s{currentCommit}"
+
     log.info $"Resolving base commit using strategy: %A{fromRef}"
 
     let baseRefs =
       match baseCommit with
+      | Parent
+      | Override "0000000000000000000000000000000000000000" when worktree ->
+        log.info $"Base revision: HEAD -> {currentCommit}"
+        [ currentCommit ]
       | Parent
       | Override "0000000000000000000000000000000000000000" ->
         log.info "Base revisions(s): "
@@ -61,11 +70,21 @@ module GitDiff =
         log.info $"Base revision: {ref}"
         [ ref ]
 
+    let changedFiles baseRef =
+      if worktree then
+        Seq.append
+          (FileStatus.getChangedFilesInWorkingCopy pwd baseRef)
+          (CommandHelper.getGitResult pwd "ls-files --others --exclude-standard --full-name"
+           |> Seq.filter ((<>) "")
+           |> Seq.map (fun file -> FileStatus.Added, file))
+      else
+        FileStatus.getChangedFiles pwd currentCommit baseRef
+
     let dirs =
       seq {
         for baseRef in baseRefs do
           yield!
-            FileStatus.getChangedFiles pwd currentCommit baseRef
+            changedFiles baseRef
             |> Seq.map (fun (_, filePath) ->
               let dir = Path.GetRelativePath(pwd, (FileInfo filePath).Directory.FullName)
               dir, filePath)
@@ -97,3 +116,9 @@ module GitDiff =
       effectiveRange =
         { baseCommits = baseRefs
           currentCommit = currentCommit } }
+
+  let dirsFromDiff (includeRootDir: bool) (fromRef: BaseCommitStrategy) (toRef: string option) : DiffResult =
+    diff includeRootDir fromRef toRef false
+
+  let dirsFromWorktreeDiff (includeRootDir: bool) (fromRef: BaseCommitStrategy) : DiffResult =
+    diff includeRootDir fromRef None true

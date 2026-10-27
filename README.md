@@ -27,13 +27,14 @@ plan {
 ```bash
 fsy run plan.fsx                # changes since HEAD's parent(s)
 DBT_MODE=all fsy run plan.fsx   # every project
+DBT_WORKTREE=true fsy run plan.fsx   # uncommitted changes, before you commit
 ```
 
 Pin with `github arquidevio/dbt:<tag-or-commit>`. Requires [fsy](https://github.com/queil/fsy).
 
 ## How it works
 
-1. Diff mode: changed files between the base and current commit, grouped by dir. All mode: every tracked file.
+1. Diff mode: changed files between the base and current commit, grouped by dir. With `DBT_WORKTREE=true`: the working tree (staged, unstaged and untracked non-ignored files) against the base. All mode: every tracked file.
 2. Each changed dir maps to its closest ancestor dir containing a file matching the selector `pattern`.
 3. `expand_leafs` maps that project to the leaf projects to build (e.g. a library to the apps referencing it).
 4. `required_when` / `ignored_when` / `exclude` filter the result.
@@ -100,6 +101,7 @@ selector {
 | `DBT_PROFILE` | `default` | profile to evaluate |
 | `DBT_BASE_COMMIT` | | base commit override |
 | `DBT_CURRENT_COMMIT` | `HEAD` | current commit |
+| `DBT_WORKTREE` | `false` | `true`: diff the working tree instead of the current commit, see below |
 | `DBT_PR_TARGET_BRANCH` | | base = merge-base with `origin/<branch>` (fetched) |
 | `DBT_CI` | | `GITHUB` or `TEKTON`: base = last successful run's commit |
 | `DBT_LOG_LEVEL` | `info` | |
@@ -107,6 +109,8 @@ selector {
 | `DBT_SNAPSHOT_DIR` | cwd | |
 
 Base commit: `DBT_PR_TARGET_BRANCH` > `range`/`DBT_BASE_COMMIT` > `DBT_CI` last success > parent(s) of current.
+
+`DBT_WORKTREE=true` resolves the base against `HEAD`: `DBT_PR_TARGET_BRANCH`, `DBT_BASE_COMMIT` and `DBT_CI` work as above; with none set, the base is `HEAD` itself (uncommitted changes only). Change keys come from commits base..`HEAD`. Can't be combined with `DBT_CURRENT_COMMIT`/`to_ref` or `DBT_SNAPSHOT`.
 
 Don't use a shallow clone: diffs against missing history and change keys come out incomplete.
 

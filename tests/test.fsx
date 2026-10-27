@@ -9,3 +9,4 @@
 open Arquidev.Dbt
 
 GitDiff.dirsFromDiff false (Override "HEAD^^^") (Some "HEAD")
+GitDiff.dirsFromWorktreeDiff false Parent
